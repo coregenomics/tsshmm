@@ -1,0 +1,16 @@
+Package: tsshmm
+Title: Denovo Promoter Segmentation from Nuclear Run-On and Sequencing Data
+Version: 0.0.0.9000
+Authors@R:
+    person(given = "Pariksheet",
+           family = "Nanda",
+           role = c("aut", "cre"),
+           email = "pariksheet.nanda@uconn.edu",
+           comment = c(ORCID = "0000-0001-9726-4552"))
+Description: Viterbi decode gene promoter regions and TSS sites from
+    nuclear run-on and sequencing data.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.0
