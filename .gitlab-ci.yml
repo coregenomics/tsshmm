@@ -1,7 +1,7 @@
 image: bioconductor/bioconductor_docker:RELEASE_3_11
 
 before_script:
-  - source ci_r_setup.bash
+  - source tools/ci_r_setup.bash
 
 test:
   script:
