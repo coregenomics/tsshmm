@@ -1,1 +1,3 @@
 ^LICENSE\.md$
+^\.gitlab-ci\.yml$
+^library$
