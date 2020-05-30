@@ -1,4 +1,6 @@
 ^LICENSE\.md$
+^Meta$
 ^\.gitlab-ci\.yml$
+^doc$
 ^library$
 ^tools/ci_r_setup\.yaml$

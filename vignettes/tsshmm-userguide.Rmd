@@ -1,0 +1,79 @@
+---
+title: TSS HMM User Guide
+author:
+- name: Pariksheet Nanda
+  affiliation: University of Connecticut
+  email: pariksheet.nanda@uconn.edu
+abstract: |
+  Viterbi decoding of gene promoter regions and TSS sites from nuclear
+  run-on and sequencing data.
+package: tsshmm
+output:
+  BiocStyle::pdf_document: default
+header-includes:
+- \usepackage{tikz}
+- \usetikzlibrary{shapes.arrows,positioning}
+vignette: >
+  %\VignetteIndexEntry{tsshmm-userguide}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Introduction
+
+This package implements the TSS discovery model\cite{core_analysis_2014}
+illustrated in Figure \ref{fig:hmm}.
+
+\begin{smallfigure}
+  \begin{tikzpicture}[state/.style={draw,circle,minimum size=1cm}]
+    % States
+    \node [state] (b) {B};
+    \node [state,label=Non-peaked TSS,left=of b] (n1) {N1};
+    \node [state,label=Peaked TSS,right=of b]    (p1) {P1};
+    \node [state,below=of n1] (n2) {N2};
+    \node [state,below=of p1] (p2) {P2};
+    \node [state,below=of n2] (n3) {N3};
+    \node [state,below=of p2] (p3) {P3};
+
+    % Connections
+    \draw[->]  (b) edge [loop above] node {0.99} (b);
+    \draw[->]  (b) -- node [below] {0.005} (n1);
+    \draw[->]  (b) -- node [below] {0.005} (p1);
+
+    \draw[->] (n1) -- node [left] {1}   (n2);
+    \draw[->] (n2) -- node [left] {0.5} (n3);
+    \draw[->] (n2) edge [loop left] node {0.5} (n2);
+
+    \draw[->] (p1) -- node [right] {0.5} (p2);
+    \draw[->] (p1) edge [loop right] node {0.5} (p1);
+    \draw[->] (p2) -- node [right] {0.45} (p3);
+    \draw[->] (p2) edge [bend left] node [left] {0.45} (p1);
+    \draw[->] (p2) edge [loop right] node {0.1} (p2);
+    \draw[->] (p3) edge [loop right] node {0.5} (p3);
+
+    \draw[->] (n3) -- node [near start,right] {1}   (b);
+    \draw[->] (p3) -- node [near start,left]  {0.5} (b);
+  \end{tikzpicture}
+  \caption{\label{fig:hmm}TSS HMM for detecting enhancer transcripts.  Adapted
+    from~\cite[supplementary figure 2]{core_analysis_2014}.  HMM to find
+    transcription start sites from GRO-cap treated with and without the
+    cap-removing enzyme, tobacco acid pyrophosphatase (TAP).  The model takes
+    as input 10 basepair summed GRO-cap counts, classified into 3 observations:
+    (i)~no signal, TAP+ == 0, (ii)~enriched, TAP+ $>$ TAP-, and (iii)~depleted,
+    TAP- $>$ TAP+ $>$ 0.  The model searches for 3 states: (i)~background (B),
+    (ii)~peaked TSS regions (P1-P3), and (iii)~non-peaked TSS regions (N1-N3).
+    Both the peaked and non-peaked TSS regions each require 3 states to
+    describe them because the non-peaked regions are flanked by single low
+    intensity transitions and have a moderately long intensity center, whereas
+    the peaked regions are flanked by one-or-more low intensity transitions and
+    a short intense center.}
+\end{smallfigure}
+
+\bibliography{refs}
