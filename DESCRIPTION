@@ -10,6 +10,8 @@ Authors@R:
 Description: Viterbi decoding of gene promoter regions and TSS sites from
     nuclear run-on and sequencing data.
 License: GPL-3
+URL: https://gitlab.com/coregenomics/tsshmm
+BugReports: https://gitlab.com/coregenomics/tsshmm/issues
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
