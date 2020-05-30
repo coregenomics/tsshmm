@@ -6,7 +6,7 @@ before_script:
 test:
   script:
     - Rscript -e 'system.time(devtools::install(dependencies = TRUE, quiet = TRUE))'
-    - Rscript -e 'devtools::check()'
+    - Rscript -e 'devtools::check(vignettes = FALSE)'
   cache:
     paths:
       - library/
