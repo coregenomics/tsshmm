@@ -1,6 +1,6 @@
 Package: tsshmm
 Title: Denovo Promoter Segmentation from Nuclear Run-On and Sequencing Data
-Version: 0.1.0
+Version: 0.2.0
 Authors@R:
     person(given = "Pariksheet",
            family = "Nanda",
@@ -29,6 +29,13 @@ biocViews:
     HiddenMarkovModel,
     Sequencing,
     Annotation
+Imports:
+    BiocGenerics,
+    GenomicRanges,
+    IRanges,
+    S4Vectors,
+    methods,
+    stats
 Suggests:
     BiocStyle,
     knitr,
