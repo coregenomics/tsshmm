@@ -98,7 +98,6 @@ test_that("tss breaks ties using look head and look behind", {
                         "chr1:201"),
                       score = c(9L, 1L, 9L))
     tss <- tss(signal, NULL, range(signal))
-    skip("Look behind is currently broken in tss()")
     expect_equal(tss, signal[3])
 })
 
