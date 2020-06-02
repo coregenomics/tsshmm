@@ -82,7 +82,7 @@ hmm <- function(signal, bg, ranges) {
     reduce(unlist(windows[has_signal])[unlist(is_promoter)])
 }
 
-tss <- function(signal, bg, ranges) {
+tss <- function(signal, ranges) {
     ## Find the highest peak within each region using 2 bp windows.  Tiling 2
     ## bp windows is inefficient, so instead use a rolling max in the C layer.
     ol <- findOverlaps(ranges, signal)
@@ -91,7 +91,6 @@ tss <- function(signal, bg, ranges) {
     starts_signal <-
         start(signal[subjectHits(ol)]) -
         start(ranges[queryHits(ol)])
-    ## TODO: Implement background subtraction.
     scores_signal <- score(signal[subjectHits(ol)])
     ## Down convert numeric to integer.
     if (! is(scores_signal, "integer"))

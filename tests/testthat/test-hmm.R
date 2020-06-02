@@ -63,7 +63,7 @@ test_that("tss returns peak values and positions", {
     df <- data.frame(i = queryHits(ol),
                      score = score(signal[subjectHits(ol)]))
     df <- aggregate(score ~ ., data = df, max)
-    tss <- tss(signal, NULL, gr)
+    tss <- tss(signal, gr)
     expect_equal(score(tss), df$score)
 })
 
@@ -71,10 +71,10 @@ test_that("tss handles non-integer scores", {
     signal <- GRanges(c("chr1:100",
                         "chr1:200"),
                       score = c(9L, 9L))
-    tss <- tss(signal, NULL, range(signal))
+    tss <- tss(signal, range(signal))
     expect_equal(tss, signal[1])
     score(signal) <- c(9.0, 9.0)
-    tss <- tss(signal, NULL, range(signal))
+    tss <- tss(signal, range(signal))
     expect_equal(tss, signal[1])
 })
 
@@ -83,24 +83,20 @@ test_that("tss breaks ties using look head and look behind", {
     signal <- GRanges(c("chr1:100",
                         "chr1:200"),
                       score = c(9L, 9L))
-    tss <- tss(signal, NULL, range(signal))
+    tss <- tss(signal, range(signal))
     expect_equal(tss, signal[1])
     ## Look head.
     signal <- GRanges(c("chr1:100",
                         "chr1:200",
                         "chr1:201"),
                       score = c(9L, 9L, 1L))
-    tss <- tss(signal, NULL, range(signal))
+    tss <- tss(signal, range(signal))
     expect_equal(tss, signal[2])
     ## Look behind.
     signal <- GRanges(c("chr1:100",
                         "chr1:200",
                         "chr1:201"),
                       score = c(9L, 1L, 9L))
-    tss <- tss(signal, NULL, range(signal))
+    tss <- tss(signal, range(signal))
     expect_equal(tss, signal[3])
-})
-
-test_that("tss uses background subtraction", {
-    skip("Need to implement background subtraction in tss()")
 })
