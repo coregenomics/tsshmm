@@ -93,6 +93,9 @@ tss <- function(signal, bg, ranges) {
         start(ranges[queryHits(ol)])
     ## TODO: Implement background subtraction.
     scores_signal <- score(signal[subjectHits(ol)])
+    ## Down convert numeric to integer.
+    if (! is(scores_signal, "integer"))
+        scores_signal <- as.integer(scores_signal)
     n_groups <- length(unique(queryHits(ol)))
     indices_peak <- vector("integer", n_groups)
     scores_peak <- vector("integer", n_groups)

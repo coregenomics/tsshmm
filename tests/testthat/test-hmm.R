@@ -67,6 +67,17 @@ test_that("tss returns peak values and positions", {
     expect_equal(score(tss), df$score)
 })
 
+test_that("tss handles non-integer scores", {
+    signal <- GRanges(c("chr1:100",
+                        "chr1:200"),
+                      score = c(9L, 9L))
+    tss <- tss(signal, NULL, range(signal))
+    expect_equal(tss, signal[1])
+    score(signal) <- c(9.0, 9.0)
+    tss <- tss(signal, NULL, range(signal))
+    expect_equal(tss, signal[1])
+})
+
 test_that("tss breaks ties using look head and look behind", {
     ## Should choose first peak encountered when there is no adjacency.
     signal <- GRanges(c("chr1:100",
