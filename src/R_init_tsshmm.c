@@ -5,9 +5,12 @@
 
 /* Register C routines for R. */
 
+#define CALLDEF(name, n) {#name, (DL_FUNC) &name, n}
+
 static const R_CallMethodDef call_methods[] =
   {
-   { "C_viterbi", (DL_FUNC) &C_viterbi, 2 },
+   CALLDEF(C_tss, 5),
+   CALLDEF(C_viterbi, 2),
    { NULL, NULL, 0 }		/* Terminating NULL entry. */
   };
 

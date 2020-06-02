@@ -54,3 +54,43 @@ test_that("scoreOverlaps min-maxes positive and negative counts", {
     score(signal) <- -score(signal)
     expect_equal(scoreOverlaps(gr, signal), -c(df$score, 0))
 })
+
+context("tss")
+
+test_that("tss returns peak values and positions", {
+    gr <- c(ranges, empty)
+    ol <- findOverlaps(gr, signal)
+    df <- data.frame(i = queryHits(ol),
+                     score = score(signal[subjectHits(ol)]))
+    df <- aggregate(score ~ ., data = df, max)
+    tss <- tss(signal, NULL, gr)
+    expect_equal(score(tss), df$score)
+})
+
+test_that("tss breaks ties using look head and look behind", {
+    ## Should choose first peak encountered when there is no adjacency.
+    signal <- GRanges(c("chr1:100",
+                        "chr1:200"),
+                      score = c(9L, 9L))
+    tss <- tss(signal, NULL, range(signal))
+    expect_equal(tss, signal[1])
+    ## Look head.
+    signal <- GRanges(c("chr1:100",
+                        "chr1:200",
+                        "chr1:201"),
+                      score = c(9L, 9L, 1L))
+    tss <- tss(signal, NULL, range(signal))
+    expect_equal(tss, signal[2])
+    ## Look behind.
+    signal <- GRanges(c("chr1:100",
+                        "chr1:200",
+                        "chr1:201"),
+                      score = c(9L, 1L, 9L))
+    tss <- tss(signal, NULL, range(signal))
+    skip("Look behind is currently broken in tss()")
+    expect_equal(tss, signal[3])
+})
+
+test_that("tss uses background subtraction", {
+    skip("Need to implement background subtraction in tss()")
+})
