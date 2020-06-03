@@ -24,21 +24,21 @@ tss(int* indices_peak, int* groups, int* indices_signal, int* starts_signal,
     /* Calculate 2bp adjacency bonus. */
     int bonus = 0;
     /* Look ahead. */
-    if (i < len - 1 &&		    /* Boundary limit for the next check. */
-	groups[i] == groups[i+1] && /* Compare only within the group. */
-	starts_signal[i+1] - starts_signal[i] == 1) { /* Adjacency check. */
+    if (i < len - 1 &&              /* Boundary limit for the next check. */
+        groups[i] == groups[i+1] && /* Compare only within the group. */
+        starts_signal[i+1] - starts_signal[i] == 1) { /* Adjacency check. */
       bonus = scores_signal[i+1];
     }
     /* Look behind. */
-    if (i > 0 &&		    /* Boundary limit for the next check. */
-	groups[i-1] == groups[i] && /* Compare only within the group. */
-	starts_signal[i] - starts_signal[i-1] == 1) { /* Adjacency check. */
+    if (i > 0 &&                    /* Boundary limit for the next check. */
+        groups[i-1] == groups[i] && /* Compare only within the group. */
+        starts_signal[i] - starts_signal[i-1] == 1) { /* Adjacency check. */
       bonus += scores_signal[i-1];
     }
     /* Find max value. */
     if (scores_signal[i] > score_prev ||
-	((scores_signal[i] == score_prev &&
-	  bonus > bonus_prev))) {
+        ((scores_signal[i] == score_prev &&
+          bonus > bonus_prev))) {
       indices_peak[g] = indices_signal[i];
       score_prev = scores_signal[i];
       bonus_prev = bonus;

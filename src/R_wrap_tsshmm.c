@@ -20,10 +20,10 @@ C_tss(SEXP indices_peak, SEXP groups, SEXP indices_signal, SEXP starts_signal,
 
 SEXP
 C_viterbi(SEXP hidden_states,
-	  SEXP observations)
+          SEXP observations)
 {
   viterbi(INTEGER(hidden_states),
-	  INTEGER(observations),
-	  LENGTH(observations));
+          INTEGER(observations),
+          LENGTH(observations));
   return R_NilValue;
 }

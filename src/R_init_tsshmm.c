@@ -1,5 +1,5 @@
 #include <R_ext/Rdynload.h>
-#include <R_ext/Visibility.h>	/* attribute_visible */
+#include <R_ext/Visibility.h>   /* attribute_visible */
 
 #include "R_wrap_tsshmm.h"
 
@@ -11,7 +11,7 @@ static const R_CallMethodDef call_methods[] =
   {
    CALLDEF(C_tss, 5),
    CALLDEF(C_viterbi, 2),
-   { NULL, NULL, 0 }		/* Terminating NULL entry. */
+   { NULL, NULL, 0 }            /* Terminating NULL entry. */
   };
 
 void

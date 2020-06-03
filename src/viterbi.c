@@ -150,16 +150,16 @@ viterbi_fill_trellis(trellis_t* trellis, int* obs, int len)
   /* Start states */
   const double start[N_STATES] =
     {
-     L1,			/* Background */
-     L0, L0, L0,		/* Non-peaked TSS */
-     L0, L0, L0			/* Peaked TSS */
+     L1,                        /* Background */
+     L0, L0, L0,                /* Non-peaked TSS */
+     L0, L0, L0                 /* Peaked TSS */
     };
 
   /* Initialize starting values. */
   for (int state = 0; state < N_STATES; ++state) {
      /* We don't care about the -1 sentinel value, because we never use it when
-	choosing the Viterbi path.  It's there for flavor when inspecting the
-	trellis in a debugger. */
+        choosing the Viterbi path.  It's there for flavor when inspecting the
+        trellis in a debugger. */
     trellis->nodes[0][state].prev = -1;
     trellis->nodes[0][state].log_prob = start[state] + emis[state][obs[0]];
   }
@@ -168,22 +168,22 @@ viterbi_fill_trellis(trellis_t* trellis, int* obs, int len)
   for (int i = 1; i < len; ++i) {
     for (int state_cur = 0; state_cur < N_STATES; ++state_cur) {
       /* For a given state, choose the highest transition probability from the
-	 previous states.*/
+         previous states.*/
       double prob_trans_max = (trellis->nodes[i-1][0].log_prob +
-			       trans[0][state_cur]);
+                               trans[0][state_cur]);
       int prev = 0;
       for (int state_prev = 1; state_prev < N_STATES; ++state_prev) {
-	double prob_trans = (trellis->nodes[i-1][state_prev].log_prob +
-			     trans[state_prev][state_cur]);
-	if (prob_trans > prob_trans_max) {
-	  prob_trans_max = prob_trans;
-	  prev = state_prev;
-	}
+        double prob_trans = (trellis->nodes[i-1][state_prev].log_prob +
+                             trans[state_prev][state_cur]);
+        if (prob_trans > prob_trans_max) {
+          prob_trans_max = prob_trans;
+          prev = state_prev;
+        }
       }
       /* Add the emission probability. */
       trellis->nodes[i][state_cur].prev = prev;
       trellis->nodes[i][state_cur].log_prob = (prob_trans_max +
-					       emis[state_cur][obs[i]]);
+                                               emis[state_cur][obs[i]]);
     }
   }
 }
