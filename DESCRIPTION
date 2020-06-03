@@ -29,10 +29,10 @@ biocViews:
     HiddenMarkovModel,
     Sequencing,
     Annotation
+Depends:
+    GenomicRanges
 Imports:
     BiocGenerics,
-    GenomicRanges,
-    IRanges,
     S4Vectors,
     methods,
     stats

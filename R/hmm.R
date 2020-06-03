@@ -1,6 +1,5 @@
+#' @import GenomicRanges
 #' @importFrom BiocGenerics relist start score
-#' @importFrom GenomicRanges reduce
-#' @importFrom IRanges findOverlaps tile
 #' @importFrom S4Vectors endoapply mcols `mcols<-` queryHits subjectHits to
 #' @importFrom methods as is
 #' @importFrom stats aggregate
