@@ -44,15 +44,13 @@ test_that("encode checks inputs", {
 
 context("scoreOverlaps")
 
-test_that("scoreOverlaps min-maxes positive and negative counts", {
+test_that("scoreOverlaps finds max score per range", {
     gr <- c(ranges, empty)
     ol <- findOverlaps(gr, signal)
     df <- data.frame(i = queryHits(ol),
                      score = score(signal[subjectHits(ol)]))
     df <- aggregate(score ~ ., data = df, max)
     expect_equal(scoreOverlaps(gr, signal), c(df$score, 0))
-    score(signal) <- -score(signal)
-    expect_equal(scoreOverlaps(gr, signal), -c(df$score, 0))
 })
 
 context("tss")

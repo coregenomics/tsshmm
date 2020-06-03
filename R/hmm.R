@@ -107,12 +107,9 @@ scoreOverlaps <- function(gr, reads) {
     ol <- findOverlaps(gr, reads)
     mcols(ol)$score <- score(reads[to(ol)])
     df <- as(ol, "DataFrame")
-    df_min <- aggregate(score ~ queryHits, df, min)
-    df_max <- aggregate(score ~ queryHits, df, max)
+    df <- aggregate(score ~ queryHits, df, max)
     score <- vector("integer", length(gr))
-    score[df_min$queryHits] <- ifelse(
-        abs(df_min$score) > abs(df_max$score),
-        df_min$score, df_max$score)
+    score[df$queryHits] <- df$score
     score
 }
 
