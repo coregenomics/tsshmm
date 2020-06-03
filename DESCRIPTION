@@ -20,6 +20,7 @@ VignetteBuilder: knitr
 biocViews:
     Software,
     Transcription,
+    Coverage,
     GenePrediction,
     GenomeAnnotation,
     PeakDetection,
