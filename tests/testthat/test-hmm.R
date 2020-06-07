@@ -15,21 +15,61 @@ score_bg <- rnbinom(n, 0.7, 0.5)
 bg <- setScore(bases, score_bg)
 empty <- GRanges("chr1:600-650")
 
+context("hmm helpers")
+
+test_that("check_valid_hmm_reads flags invalid input", {
+    expect_error(check_valid_hmm_reads(NULL), "GRanges")
+    expect_error(check_valid_hmm_reads(GRanges("chr1:100:*")), "strand.+[*]")
+    expect_error(check_valid_hmm_reads(GRanges("chr1:100:+")), "score")
+    expect_error(check_valid_hmm_reads(GRanges("chr1:100:+", score = -10)),
+                 "score.*>=.*0")
+    expect_silent(check_valid_hmm_reads(GRanges("chr1:100:+", score = 0)))
+    expect_silent(check_valid_hmm_reads(GRanges("chr1:100:-", score = 1.5)))
+    expect_silent(check_valid_hmm_reads(GRanges()))
+})
+
+test_that("stranded always splits into + and - levels", {
+    expect_equal(lengths(stranded(GRanges("chr1:100:+"))), c("+" = 1, "-" = 0))
+    expect_equal(lengths(stranded(GRanges("chr1:100:-"))), c("+" = 0, "-" = 1))
+    expect_equal(lengths(stranded(
+        GRanges(c("chr1:100:+", "chr1:200:-")))),          c("+" = 1, "-" = 1))
+    expect_equal(lengths(stranded(GRanges("chr1:100:*"))), c("+" = 0, "-" = 0))
+    expect_equal(lengths(stranded(GRanges())),             c("+" = 0, "-" = 0))
+})
+
 context("hmm")
 
-test_that("hmm joins signal regions", {
-    promoters <- hmm(signal, bg, ranges)
-    expect_equal(promoters, GRanges(c("chr1:111-300",
-                                      "chr2:211-260",
-                                      "chr2:281-450")))
+test_that("hmm_by_strand joins signal regions", {
+    promoters <- hmm_by_strand(signal, bg, ranges)
+    expect_equal(promoters, GRanges(c("chr1:111-300:+",
+                                      "chr2:211-260:+",
+                                      "chr2:281-450:+")))
     gr_mask <- unlist(bases)[as.logical(mask)]
     n_ol <- sum(countOverlaps(gr_mask, promoters))
     expect_gt(n_ol / sum(mask), 0.8)
 })
 
-test_that("hmm notifies about missing regions", {
-    expect_silent(hmm(signal, bg, ranges))
-    expect_message(hmm(signal, bg, c(ranges, empty)), "Dropping 33[.]3%")
+test_that("hmm_by_strand notifies about missing regions", {
+    expect_silent(hmm_by_strand(signal, bg, ranges))
+    expect_message(hmm_by_strand(signal, bg, c(ranges, empty)),
+                   "Dropping 33[.]3%")
+})
+
+test_that("hmm runs on both strands", {
+    promoters <- hmm(signal, bg, ranges)
+    expect_equal(promoters,
+                 GRangesList("+" = GRanges(c("chr1:111-300:+",
+                                             "chr2:211-260:+",
+                                             "chr2:281-450:+")),
+                             "-" = GRanges()))
+    strand(signal) <- "-"
+    promoters <- hmm(signal, bg, ranges)
+    expect_equal(promoters,
+                 GRangesList("+" = GRanges(),
+                             "-" = GRanges(c("chr1:101-290:-",
+                                             "chr2:201-260:-",
+                                             "chr2:281-410:-",
+                                             "chr2:421-440:-"))))
 })
 
 context("encode")
@@ -51,6 +91,10 @@ test_that("scoreOverlaps finds max score per range", {
                      score = score(signal[subjectHits(ol)]))
     df <- aggregate(score ~ ., data = df, max)
     expect_equal(scoreOverlaps(gr, signal), c(df$score, 0))
+})
+
+test_that("scoreOverlaps handles empty input", {
+    expect_equal(scoreOverlaps(c(empty, empty), signal), c(0L, 0L))
 })
 
 context("tss")

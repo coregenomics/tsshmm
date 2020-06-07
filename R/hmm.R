@@ -34,6 +34,25 @@ encode <- function(signal, bg, windows) {
     obs
 }
 
+check_valid_hmm_reads <- function(gr) {
+    stopifnot(is(gr, "GRanges"))
+    if (length(gr) == 0L)
+        return()
+    stopifnot(any(strand(gr) != "*"))
+    stopifnot(! is.null(score(gr)))
+    stopifnot(all(score(gr) >= 0L))
+}
+
+stranded <- function(x) split(x, strand(x))[-3] # -3 removes "*" strand.
+
+hmm <- function(signal, bg, ranges) {
+    check_valid_hmm_reads(signal)
+    check_valid_hmm_reads(bg)
+    stopifnot(is(ranges, "GRanges"))
+    mendoapply(hmm_by_strand, stranded(signal), stranded(bg),
+               MoreArgs = list(ranges = ranges))
+}
+
 ## Rely on annotations for now.  Based on the data below, more careful work is
 ## required to adjust the methodology to be annotation free.  This is because
 ## choosing thresholds for how far apart GRO-cap counts can be to consider them
@@ -59,7 +78,12 @@ encode <- function(signal, bg, windows) {
 ##   0      0      0      0      0      0      1      1      1      2
 ## 55%    60%    65%    70%    75%    80%    85%    90%    95%   100%
 ##   3      4      6      9     15     25     47    122    641 191170
-hmm <- function(signal, bg, ranges) {
+hmm_by_strand <- function(signal, bg, ranges) {
+    strand <- runValue(strand(signal))
+    if (length(strand) == 0L)
+        return(GRanges())
+    stopifnot(length(strand) == 1L)
+    stopifnot(all(strand == runValue(strand(bg))))
     ## No signal at all in 80% of the annotated chr22+ enhancers regions!
     ## Therefore save calculation time by removing ranges without any counts.
     ##
@@ -73,12 +97,15 @@ hmm <- function(signal, bg, ranges) {
     if (any(has_signal == 0))
         message(sprintf("Dropping %.1f%% of regions with no signal.",
                         100 * (1 - sum(has_signal) / length(ranges))))
-    windows <- tile(ranges, width = 10)
-    observations <- encode(signal, bg, windows[has_signal])
-    is_promoter <- endoapply(observations, viterbi)
-    is_promoter <- is_promoter > 0
+    windows <- tile(ranges[has_signal], width = 10)
+    if (strand == "-")
+        windows <- endoapply(windows, rev)
+    observations <- encode(signal, bg, windows)
+    is_promoter <- endoapply(observations, viterbi) > 0
 
-    reduce(unlist(windows[has_signal])[unlist(is_promoter)])
+    gr <- reduce(unlist(windows)[unlist(is_promoter)])
+    strand(gr) <- strand
+    gr
 }
 
 tss <- function(signal, ranges) {
@@ -105,6 +132,8 @@ tss <- function(signal, ranges) {
 
 scoreOverlaps <- function(gr, reads) {
     ol <- findOverlaps(gr, reads)
+    if (length(ol) == 0L)
+        return(vector("integer", length(gr)))
     mcols(ol)$score <- score(reads[to(ol)])
     df <- as(ol, "DataFrame")
     df <- aggregate(score ~ queryHits, df, max)
