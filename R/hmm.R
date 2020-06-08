@@ -1,6 +1,7 @@
 #' @import GenomicRanges
 #' @importFrom BiocGenerics relist start score
-#' @importFrom S4Vectors endoapply mcols `mcols<-` queryHits subjectHits to
+#' @importFrom S4Vectors endoapply mendoapply mcols `mcols<-` runValue
+#'     queryHits subjectHits to
 #' @importFrom methods as is
 #' @importFrom stats aggregate
 NULL
