@@ -41,8 +41,8 @@ context("hmm")
 
 test_that("hmm_by_strand joins signal regions", {
     promoters <- hmm_by_strand(signal, bg, ranges)
-    expect_equal(promoters, GRanges(c("chr1:111-300:+",
-                                      "chr2:211-260:+",
+    expect_equal(promoters, GRanges(c("chr1:101-300:+",
+                                      "chr2:201-260:+",
                                       "chr2:281-450:+")))
     gr_mask <- unlist(bases)[as.logical(mask)]
     n_ol <- sum(countOverlaps(gr_mask, promoters))
@@ -58,18 +58,16 @@ test_that("hmm_by_strand notifies about missing regions", {
 test_that("hmm runs on both strands", {
     promoters <- hmm(signal, bg, ranges)
     expect_equal(promoters,
-                 GRangesList("+" = GRanges(c("chr1:111-300:+",
-                                             "chr2:211-260:+",
+                 GRangesList("+" = GRanges(c("chr1:101-300:+",
+                                             "chr2:201-260:+",
                                              "chr2:281-450:+")),
                              "-" = GRanges()))
     strand(signal) <- "-"
     promoters <- hmm(signal, bg, ranges)
     expect_equal(promoters,
                  GRangesList("+" = GRanges(),
-                             "-" = GRanges(c("chr1:101-290:-",
-                                             "chr2:201-260:-",
-                                             "chr2:281-410:-",
-                                             "chr2:421-440:-"))))
+                             "-" = GRanges(c("chr1:101-300:-",
+                                             "chr2:201-450:-"))))
 })
 
 context("encode")

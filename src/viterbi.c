@@ -147,21 +147,19 @@ viterbi_fill_trellis(trellis_t* trellis, int* obs, int len)
      /* P3 */ {  L01,      L045,     L045 },
     };
 
-  /* Start states */
-  const double start[N_STATES] =
-    {
-     L1,                        /* Background */
-     L0, L0, L0,                /* Non-peaked TSS */
-     L0, L0, L0                 /* Peaked TSS */
-    };
+  /* Initialize starting values.
 
-  /* Initialize starting values. */
+     The published model unnecessary assumes background as the hidden starting
+     state which introduces starting window offset errors in the data and can
+     also fragment the viterbi decoded output; instead assume all the starting
+     states are equally likely. */
   for (int state = 0; state < N_STATES; ++state) {
      /* We don't care about the -1 sentinel value, because we never use it when
         choosing the Viterbi path.  It's there for flavor when inspecting the
         trellis in a debugger. */
     trellis->nodes[0][state].prev = -1;
-    trellis->nodes[0][state].log_prob = start[state] + emis[state][obs[0]];
+    trellis->nodes[0][state].log_prob = (log(1.0 / N_STATES) +
+                                         emis[state][obs[0]]);
   }
 
   /* Run Viterbi. */
