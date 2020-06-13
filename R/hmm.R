@@ -50,8 +50,9 @@ hmm <- function(signal, bg, ranges) {
     check_valid_hmm_reads(signal)
     check_valid_hmm_reads(bg)
     stopifnot(is(ranges, "GRanges"))
-    mendoapply(hmm_by_strand, stranded(signal), stranded(bg),
-               MoreArgs = list(ranges = ranges))
+    mendoapply(
+        hmm_by_strand, stranded(signal), stranded(bg),
+        MoreArgs = list(ranges = ranges))
 }
 
 ## Rely on annotations for now.  Based on the data below, more careful work is
