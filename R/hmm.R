@@ -109,9 +109,24 @@ hmm_by_strand <- function(signal, bg, ranges) {
     gr
 }
 
+replace_unstranded <- function (gr) {
+    idx <- strand(gr) == "*"
+    if (length(idx) == 0L)
+        return(gr)
+    sort(c(
+        gr[! idx],
+        `strand<-`(gr[idx], value = "+"),
+        `strand<-`(gr[idx], value = "-")))
+}
+
 tss <- function(signal, ranges) {
     ## Find the highest peak within each region using 2 bp windows.  Tiling 2
     ## bp windows is inefficient, so instead use a rolling max in the C layer.
+    stopifnot(is(ranges, "GRanges"))
+    stopifnot(is(signal, "GRanges"))
+    if (any(strand(signal) == "*"))
+        stop("signal must be stranded")
+    ranges <- replace_unstranded(ranges)
     ol <- findOverlaps(ranges, signal)
     groups <- queryHits(ol)
     indices_signal <- subjectHits(ol)

@@ -1,3 +1,20 @@
+# tsshmm 0.4.0 (2020-06-13)
+
+## New features
+
+- Support both strands for `hmm()` and `tss()`.
+
+## Significant user-visible changes
+
+- Negative signal and background scores are no longer supported.
+- Unstranded signal and background ranges are no longer supported.
+
+## Bug fixes and improvements
+
+- Remove the fragile starting state assumption of the published HMM by instead
+  considering all starting states as equally likely.
+
+
 # tsshmm 0.3.0 (2020-06-02)
 
 ## New features

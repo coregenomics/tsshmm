@@ -97,6 +97,15 @@ test_that("scoreOverlaps handles empty input", {
 
 context("tss")
 
+test_that("tss checks inputs", {
+    gr <- GRanges("chr:51-150")
+    expect_error(tss(GRanges("chr:100"), gr), "strand")
+    expect_silent(tss(GRanges("chr:100:+"), gr))
+    expect_silent(tss(GRanges("chr:100:-"), gr))
+    expect_error(tss(GRanges("chr:100:-"), NULL), "GRanges")
+    expect_error(tss(NULL, gr), "GRanges")
+})
+
 test_that("tss returns peak values and positions", {
     gr <- c(ranges, empty)
     ol <- findOverlaps(gr, signal)
@@ -108,8 +117,8 @@ test_that("tss returns peak values and positions", {
 })
 
 test_that("tss handles non-integer scores", {
-    signal <- GRanges(c("chr1:100",
-                        "chr1:200"),
+    signal <- GRanges(c("chr1:100:+",
+                        "chr1:200:+"),
                       score = c(9L, 9L))
     tss <- tss(signal, range(signal))
     expect_equal(tss, signal[1])
@@ -120,23 +129,35 @@ test_that("tss handles non-integer scores", {
 
 test_that("tss breaks ties using look head and look behind", {
     ## Should choose first peak encountered when there is no adjacency.
-    signal <- GRanges(c("chr1:100",
-                        "chr1:200"),
+    signal <- GRanges(c("chr1:100:+",
+                        "chr1:200:+"),
                       score = c(9L, 9L))
     tss <- tss(signal, range(signal))
     expect_equal(tss, signal[1])
     ## Look head.
-    signal <- GRanges(c("chr1:100",
-                        "chr1:200",
-                        "chr1:201"),
+    signal <- GRanges(c("chr1:100:+",
+                        "chr1:200:+",
+                        "chr1:201:+"),
                       score = c(9L, 9L, 1L))
     tss <- tss(signal, range(signal))
     expect_equal(tss, signal[2])
     ## Look behind.
-    signal <- GRanges(c("chr1:100",
-                        "chr1:200",
-                        "chr1:201"),
+    signal <- GRanges(c("chr1:100:+",
+                        "chr1:200:+",
+                        "chr1:201:+"),
                       score = c(9L, 1L, 9L))
     tss <- tss(signal, range(signal))
     expect_equal(tss, signal[3])
+})
+
+test_that("tss returns strand-specific peaks", {
+    signal <- GRanges(c("chr1:100:+",
+                        "chr1:150:-",
+                        "chr1:200:+",
+                        "chr1:250:-"),
+                      score = c(1L, 9L, 9L, 1L))
+    tss <- tss(signal, range(signal))
+    expect_equal(tss, sort(signal[2:3]))
+    tss <- tss(signal, range(signal, ignore.strand = TRUE))
+    expect_equal(tss, sort(signal[2:3]))
 })
