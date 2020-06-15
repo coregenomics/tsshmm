@@ -46,6 +46,70 @@ check_valid_hmm_reads <- function(gr) {
 
 stranded <- function(x) split(x, strand(x))[-3] # -3 removes "*" strand.
 
+#' Convert signal and background GRO-cap counts into promoter regions.
+#'
+#' \code{hmm} implements Andre Martin's HMM model to find transcription start
+#' sites from GRO-cap sequencing.
+#'
+#' The model takes inputs of raw GRO-cap counts, aggregates 10 basepair tiles
+#' by maximum value, and categorizes them into 3 types of observations:
+#' \enumerate{
+#' \item no signal (TAP+ == 0)
+#' \item enriched  (TAP+ >  TAP-)
+#' \item depleted  (TAP- >= TAP+ > 0)
+#' }
+#' ...and searches for 3 groups of hidden states:
+#' \enumerate{
+#' \item background,
+#' \item peaked TSS regions, and
+#' \item non-peaked TSS regions
+#' }
+#'
+#' Both the peaked and non-peaked TSS regions each require 3 states to describe
+#' them:
+#' \itemize{
+#' \item Non-peaked regions flanked by single low intensity transitions and a
+#' moderately long intensity center.
+#' \item Peaked regions flanked by one-or-more low intensity transitions and a
+#' short intense center.
+#' }
+#' Therefore, in total the HMM has 7 states:
+#' \describe{
+#' \item{B}{Background}
+#' \item{N1}{Non-peaked TSS transition state}
+#' \item{N2}{Non-peaked TSS repeating state}
+#' \item{N3}{Non-peaked TSS transition state}
+#' \item{P1}{Peaked TSS moderate signal}
+#' \item{P2}{Peaked TSS high signal}
+#' \item{P3}{Peaked TSS moderate signal}
+#' }
+#'
+#' Finally, after the hidden states are obtained from Viterbi decoding, the
+#' hidden states are converted back into stranded GRanges.
+#'
+#' @param signal Stranded, single base \code{GRanges} with integer score.
+#' @param bg Stranded, single base \code{GRanges} with integer score.
+#' @param ranges \code{GRanges} to limit signal search.
+#' @return Strand-specific \code{GRanges} of peaked and non-peaked promoter
+#'     regions.
+#' @importFrom Rdpack reprompt
+#' @references
+#' \insertRef{core_analysis_2014}{tsshmm}
+#' @examples
+#' signal <- GRanges(paste0("chr1:", c(100, 110, 200, 300), ":+"))
+#' score(signal) <- rep(5L, 4)
+#' signal
+#' promoters_peaked <- hmm(signal, GRanges(), range(signal))
+#' promoters_peaked
+#' # There is only 1 promoter in thise region because the first two signal
+#' # values filling 2x 20 bp windows are captured by the HMM as a promoter.
+#' # The remaining 2 signal peaks with no surrounding signal are ignored.
+#' stopifnot(length(promoters) == 1)
+#'
+#' bg_nonpeaked <- signal
+#' promoters_nonpeaked <- hmm(signal, bg_nonpeaked, range(signal))
+#' promoters_nonpeaked
+#' @export
 hmm <- function(signal, bg, ranges) {
     check_valid_hmm_reads(signal)
     check_valid_hmm_reads(bg)
@@ -122,6 +186,48 @@ replace_unstranded <- function (gr) {
         `strand<-`(gr[idx], value = "-")))
 }
 
+#' Find promoter peaks using 3 basepair tie-breaking.
+#'
+#' The original method for extracting the TSS was using 2 basepair windows, but
+#' note that this detail was not documented in
+#' \insertCite{core_analysis_2014}{tsshmm}.  Preserving the intention of that
+#' method to use neighboring counts to break ties, this method uses 3 basepair
+#' overlapping windows, where the preceding and succeeding basepair counts act
+#' as a "bonus" value to help break ties.
+#'
+#' @inheritParams hmm
+#' @return Stranded, single base \code{GRanges} with integer score.
+#' @examples
+#' # When counts are equal, TSS returns first maximum.
+#' signal <- GRanges(c("chr1:100:+", "chr1:200:+"), score = c(9L, 9L))
+#' signal
+#' tss <- tss(signal, range(signal))
+#' tss
+#' stopifnot(tss == signal[1])
+#'
+#' # Neighboring "bonus" counts break such ties:
+#'
+#' # Look 1 basepair ahead to choose the maximum.
+#' signal_ahead <- c(signal, GRanges("chr1:201:+", score = 1L))
+#' signal_ahead
+#' tss_ahead <- tss(signal_ahead, range(signal_ahead))
+#' tss_ahead
+#' stopifnot(tss_ahead == signal_ahead[2])
+#'
+#' # Look 1 basepair behind to choose the maximum.
+#' signal_behind <- c(GRanges("chr1:99:+", score = 2L), signal_ahead)
+#' signal_behind
+#' tss_behind <- tss(signal_behind, range(signal_behind))
+#' tss_behind
+#' stopifnot(tss_behind == signal_behind[2])
+#'
+#' # Both, look ahead and look behind tie breaking.
+#' signal_both <- sort(c(GRanges("chr1:199:+", score = 2L), signal_behind))
+#' signal_both
+#' tss_both <- tss(signal_both, range(signal_both))
+#' tss_both
+#' stopifnot(tss_both == signal_both[4])
+#' @export
 tss <- function(signal, ranges) {
     ## Find the highest peak within each region using 2 bp windows.  Tiling 2
     ## bp windows is inefficient, so instead use a rolling max in the C layer.
