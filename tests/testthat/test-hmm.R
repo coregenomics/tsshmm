@@ -132,7 +132,7 @@ test_that("tss breaks ties using look head and look behind", {
                       score = c(9L, 9L))
     tss <- tss(signal, range(signal))
     expect_equal(tss, signal[1])
-    ## Look head.
+    ## Look ahead.
     signal <- GRanges(c("chr1:100:+",
                         "chr1:200:+",
                         "chr1:201:+"),
