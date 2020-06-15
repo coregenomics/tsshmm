@@ -1,3 +1,15 @@
+# tsshmm 0.5.0 (2020-06-15)
+
+## Significant user-visible changes
+
+- `hmm()` and `tss()` now have documentation and examples.
+- `hmm()` now returns `GRanges` instead of strand split `GRangesList`.
+
+## Bug fixes and improvements
+
+- Require sorted signal input to `tss()` required by underlying C algorithm.
+
+
 # tsshmm 0.4.0 (2020-06-13)
 
 ## New features
