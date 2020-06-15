@@ -104,6 +104,13 @@ test_that("tss checks inputs", {
     expect_error(tss(NULL, gr), "GRanges")
 })
 
+test_that("tss requires sorted signal", {
+    gr <- GRanges("chr:51-150")
+    signal <- GRanges(c("chr:150:+", "chr:100:+"))
+    expect_error(tss(signal, gr), "isSorted")
+    expect_silent(tss(sort(signal), gr))
+})
+
 test_that("tss returns peak values and positions", {
     gr <- c(ranges, empty)
     ol <- findOverlaps(gr, signal)
@@ -146,12 +153,21 @@ test_that("tss breaks ties using look head and look behind", {
                       score = c(9L, 1L, 9L))
     tss <- tss(signal, range(signal))
     expect_equal(tss, signal[3])
+    ## Look ahead and look behind.
+    signal <- GRanges(c("chr1:100:+",
+                        "chr1:101:+",
+                        "chr1:199:+",
+                        "chr1:200:+",
+                        "chr1:201:+"),
+                      score = c(2L, 9L, 2L, 9L, 1L))
+    tss <- tss(signal, range(signal))
+    expect_equal(tss, signal[4])
 })
 
 test_that("tss returns strand-specific peaks", {
     signal <- GRanges(c("chr1:100:+",
-                        "chr1:150:-",
                         "chr1:200:+",
+                        "chr1:150:-",
                         "chr1:250:-"),
                       score = c(1L, 9L, 9L, 1L))
     tss <- tss(signal, range(signal))

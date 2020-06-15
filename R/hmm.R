@@ -235,6 +235,7 @@ tss <- function(signal, ranges) {
     stopifnot(is(signal, "GRanges"))
     if (any(strand(signal) == "*"))
         stop("signal must be stranded")
+    stopifnot(isSorted(signal))
     ranges <- replace_unstranded(ranges)
     ol <- findOverlaps(ranges, signal)
     groups <- queryHits(ol)
