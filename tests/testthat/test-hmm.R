@@ -58,16 +58,14 @@ test_that("hmm_by_strand notifies about missing regions", {
 test_that("hmm runs on both strands", {
     promoters <- hmm(signal, bg, ranges)
     expect_equal(promoters,
-                 GRangesList("+" = GRanges(c("chr1:101-300:+",
-                                             "chr2:201-260:+",
-                                             "chr2:281-450:+")),
-                             "-" = GRanges()))
+                 GRanges(c("chr1:101-300:+",
+                           "chr2:201-260:+",
+                           "chr2:281-450:+")))
     strand(signal) <- "-"
     promoters <- hmm(signal, bg, ranges)
     expect_equal(promoters,
-                 GRangesList("+" = GRanges(),
-                             "-" = GRanges(c("chr1:101-300:-",
-                                             "chr2:201-450:-"))))
+                 GRanges(c("chr1:101-300:-",
+                           "chr2:201-450:-")))
 })
 
 context("encode")
