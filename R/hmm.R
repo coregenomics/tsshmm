@@ -169,11 +169,20 @@ hmm_by_strand <- function(signal, bg, ranges) {
     if (strand == "-")
         windows <- endoapply(windows, rev)
     observations <- encode(signal, bg, windows)
-    is_promoter <- endoapply(observations, viterbi) > 0
+    states <- endoapply(observations, viterbi)
+    is_promoter <- states > 0
 
-    gr <- reduce(unlist(windows)[unlist(is_promoter)])
+    gr <- unlist(windows)
     strand(gr) <- strand
-    gr
+    gr$states <- unlist(states)
+    ## Several hidden states may compose a promoter region, therefore preserve
+    ## all states using the with.revmap option.
+    gr_reduced <- reduce(gr[unlist(is_promoter)], with.revmap = TRUE)
+    gr_reduced$states <- relist(
+        gr$states[unlist(is_promoter)][unlist(gr_reduced$revmap)],
+        gr_reduced$revmap)
+    gr_reduced$revmap <- NULL
+    gr_reduced
 }
 
 replace_unstranded <- function (gr) {
