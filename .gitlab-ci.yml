@@ -1,4 +1,4 @@
-image: bioconductor/bioconductor_docker:RELEASE_3_11
+image: bioconductor/bioconductor_docker:RELEASE_3_13
 
 before_script:
   - source tools/ci_r_setup.bash
