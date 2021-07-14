@@ -4,6 +4,7 @@ mkdir -vp "$R_LIBS_USER"
 cat <<EOF > "$R_PROFILE_USER"
 local({
     .libPaths("$R_LIBS_USER")
-    options(repos = BiocManager::repositories())
+    options(repos = BiocManager::repositories(),
+            Ncpus = parallel::detectCores())
 })
 EOF
