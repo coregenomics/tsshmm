@@ -80,3 +80,39 @@ C_viterbi_vectorized(SEXP hidden_states,
 
   return R_NilValue;
 }
+
+SEXP
+C_viterbi_vectorized_mt(SEXP hidden_states,
+			SEXP observations,
+			SEXP lengths)
+{
+  int len_max = INTEGER(lengths)[0];
+  int* cumsum = Calloc(LENGTH(lengths), int);
+  cumsum[0] = 0;
+  for (int i = 1; i < LENGTH(lengths); ++i) {
+    cumsum[i] = cumsum[i-1] + INTEGER(lengths)[i];
+    if (INTEGER(lengths)[i] > len_max) {
+      len_max = INTEGER(lengths)[i];
+    }
+  }
+#pragma omp parallel
+  {
+    trellis_t* trellis = NULL;
+    trellis_init(&trellis, len_max);
+
+#pragma omp for nowait
+    for (int i = 0; i < LENGTH(lengths); ++i) {
+      int* obs = INTEGER(observations) + cumsum[i];
+      int len = INTEGER(lengths)[i];
+      int* ret = INTEGER(hidden_states) + cumsum[i];
+
+      viterbi_fill_trellis(trellis, obs, len);
+      viterbi_choose_path(ret, trellis, len);
+    }
+
+    trellis_destroy(&trellis, len_max);
+  }
+  Free(cumsum);
+
+  return R_NilValue;
+}

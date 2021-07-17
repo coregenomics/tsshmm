@@ -26,6 +26,30 @@ model <- list(
         0.10, 0.45, 0.45),
         ncol = 3, byrow = TRUE,
         dimnames = list(states, emissions)))
+## Simulate data from the HMM.
+set.seed(99)
+states_list <- IntegerList()
+obs_list <- IntegerList()
+for (li in seq(1, 10)) {
+    ## Generate the initial hidden value.
+    latent <- sample(c("N1", "P1"), 1, prob = c(0.5, 0.5))
+    ## Generate the corresponding observation.
+    states_1k <- vector("integer", 1000L)
+    obs_1k <- vector("integer", 1000L)
+    states_1k[1] <- match(latent, states) -1
+    obs_1k[1] <- sample(seq_along(emissions) - 1, size = 1,
+                        prob = model$emis[latent, ])
+    ## Generate the subsequent hidden value and corresponding observations.
+    for (i in seq_along(obs_1k)[-1]) {
+        latent <-    sample(states, size = 1,
+                            prob = model$trans[latent, ])
+        obs_1k[i] <- sample(seq_along(emissions) - 1, size = 1,
+                            prob = model$emis[latent, ])
+        states_1k[i] <- match(latent, states) -1
+    }
+    states_list[[li]] <- states_1k
+    obs_list[[li]] <- obs_1k
+}
 
 test_that("viterbi decodes enhancer region", {
     ## These observations are from ENCODE enhancer ID EH37E0477524 + strand.  See
@@ -53,35 +77,29 @@ test_that("viterbi decodes enhancer region", {
 })
 
 test_that("viterbi has a vectorized implementation", {
-    ## Simulate data from the HMM.
-    set.seed(99)
-    states_list <- IntegerList()
-    obs_list <- IntegerList()
-    for (li in seq(1, 10)) {
-        ## Generate the initial hidden value.
-        latent <- sample(c("N1", "P1"), 1, prob = c(0.5, 0.5))
-        ## Generate the corresponding observation.
-        states_1k <- vector("integer", 1000L)
-        obs_1k <- vector("integer", 1000L)
-        states_1k[1] <- match(latent, states) -1
-        obs_1k[1] <- sample(seq_along(emissions) - 1, size = 1,
-                            prob = model$emis[latent, ])
-        ## Generate the subsequent hidden value and corresponding observations.
-        for (i in seq_along(obs_1k)[-1]) {
-            latent <-    sample(states, size = 1,
-                                prob = model$trans[latent, ])
-            obs_1k[i] <- sample(seq_along(emissions) - 1, size = 1,
-                                prob = model$emis[latent, ])
-            states_1k[i] <- match(latent, states) -1
-        }
-        states_list[[li]] <- states_1k
-        obs_list[[li]] <- obs_1k
-    }
-    states_decoded <- viterbi(obs_list)
+    states_decoded <- viterbi(obs_list, parallel = FALSE)
     expect_type(states_decoded, "S4")
     expect_s4_class(states_decoded, "IntegerList")
     expect_equal(length(states_decoded), length(states_list))
     ## Regression test for seed 99.
     expect_equal(sum(states_decoded == states_list),
                  c(945, 948, 949, 959, 943, 939, 948, 967, 978, 934))
+    ## Compare output with non-vectorized.
+    states_decoded_slow <- endoapply(obs_list, viterbi)
+    expect_equal(states_decoded, states_decoded_slow)
+})
+
+test_that("viterbi has a multi-threaded implementation", {
+    time_non_vec <- system.time(
+        states_non_vec <- endoapply(obs_list, viterbi))["elapsed"]
+    time_non_mt <- system.time(
+        states_non_mt <- viterbi(obs_list, parallel = FALSE))["elapsed"]
+    time <- system.time(
+        states_mt <- viterbi(obs_list, parallel = TRUE))["elapsed"]
+    expect_equal(states_mt, states_non_vec)
+    expect_equal(states_mt, states_non_mt)
+    expect_lte(time, time_non_vec)
+    # Multi-threaded implementation needs much more data to reliably
+    # show speed-up, but generating that data takes very long.
+    ## expect_lte(time, time_non_mt)
 })
