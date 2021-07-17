@@ -115,7 +115,7 @@ viterbi_fill_trellis(trellis_t* trellis, int* obs, int len)
   for (int i = 0; i < N_STATES; ++i) {
     double sum = 0.0;
     for (int j = 0; j < N_STATES; ++j) {
-      sum += trans[i][j];
+      sum += exp(trans[i][j]);
       REprintf("%6.4f ", trans[i][j]);
     }
     REprintf("\n");
