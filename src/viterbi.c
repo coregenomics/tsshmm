@@ -32,9 +32,9 @@ typedef struct trellis_node_st {
   double log_prob;
 } trellis_node_t;
 
-typedef struct trellis_st {
+struct trellis_st {
   trellis_node_t** nodes;
-} trellis_t;
+};
 
 void
 trellis_init(trellis_t** trellis, int len)
