@@ -30,7 +30,7 @@ model <- list(
 set.seed(99)
 states_list <- IntegerList()
 obs_list <- IntegerList()
-for (li in seq(1, 10)) {
+for (li in seq(1, 100)) {
     ## Generate the initial hidden value.
     latent <- sample(c("N1", "P1"), 1, prob = c(0.5, 0.5))
     ## Generate the corresponding observation.
@@ -82,7 +82,7 @@ test_that("viterbi has a vectorized implementation", {
     expect_s4_class(states_decoded, "IntegerList")
     expect_equal(length(states_decoded), length(states_list))
     ## Regression test for seed 99.
-    expect_equal(sum(states_decoded == states_list),
+    expect_equal(sum(states_decoded[1:10] == states_list[1:10]),
                  c(945, 948, 949, 959, 943, 939, 948, 967, 978, 934))
     ## Compare output with non-vectorized.
     states_decoded_slow <- endoapply(obs_list, viterbi)
@@ -99,7 +99,7 @@ test_that("viterbi has a multi-threaded implementation", {
     expect_equal(states_mt, states_non_vec)
     expect_equal(states_mt, states_non_mt)
     expect_lte(time, time_non_vec)
-    # Multi-threaded implementation needs much more data to reliably
-    # show speed-up, but generating that data takes very long.
-    ## expect_lte(time, time_non_mt)
+    if (parallel::detectCores() >= 4) {
+        expect_lte(time, time_non_mt)
+    }
 })
