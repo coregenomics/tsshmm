@@ -78,4 +78,10 @@ test_that("viterbi has a vectorized implementation", {
         obs_list[[li]] <- obs_1k
     }
     states_decoded <- viterbi(obs_list)
+    expect_type(states_decoded, "S4")
+    expect_s4_class(states_decoded, "IntegerList")
+    expect_equal(length(states_decoded), length(states_list))
+    ## Regression test for seed 99.
+    expect_equal(sum(states_decoded == states_list),
+                 c(945, 948, 949, 959, 943, 939, 948, 967, 978, 934))
 })

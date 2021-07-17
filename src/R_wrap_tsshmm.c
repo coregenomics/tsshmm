@@ -31,26 +31,48 @@ C_viterbi(SEXP hidden_states,
 
 SEXP
 C_viterbi_vectorized(SEXP hidden_states,
-		     SEXP observations)
+		     SEXP observations,
+		     SEXP lengths)
 {
   /* Only allocate the trellis once using the longest observation. */
   int len_max = -1;
-  for (int i = 0; i < length(observations); ++i) {
-    if (LENGTH(VECTOR_ELT(observations, i)) > len_max) {
-      len_max = LENGTH(VECTOR_ELT(observations, i));
+  for (int i = 0; i < LENGTH(lengths); ++i) {
+    if (INTEGER(lengths)[i] > len_max) {
+      len_max = INTEGER(lengths)[i];
     }
   }
   trellis_t* trellis = NULL;
   trellis_init(&trellis, len_max);
 
   /* Run Viterbi. */
-  for (int i = 0; i < length(observations); ++i) {
-    int* obs = INTEGER(VECTOR_ELT(observations, i));
-    int len = LENGTH(VECTOR_ELT(observations, i));
-    int* ret = INTEGER(VECTOR_ELT(hidden_states, i));
+  int cumsum = 0;
+  for (int i = 0; i < LENGTH(lengths); ++i) {
+    int* obs = INTEGER(observations) + cumsum;
+    int len = INTEGER(lengths)[i];
+    int* ret = INTEGER(hidden_states) + cumsum;
 
+#ifdef DEBUG_VITERBI_VECTORIZED
+#include <R_ext/RS.h>
+    REprintf("\n     i: %d\n", i);
+    REprintf("cumsum: %d\n", cumsum);
+    REprintf("   len: %d\n", len);
+    REprintf("  *obs: [ 0x%X ] ", obs);
+    for (int j = 0; j < len; ++j) {
+      REprintf("%d ", obs[j]);
+    }
+    REprintf("\n");
+#endif
     viterbi_fill_trellis(trellis, obs, len);
     viterbi_choose_path(ret, trellis, len);
+#ifdef DEBUG_VITERBI_VECTORIZED
+    REprintf("  *ret: [ 0x%X ] ", ret);
+    for (int j = 0; j < len; ++j) {
+      REprintf("%d ", ret[j]);
+    }
+    REprintf("\n");
+#endif
+
+    cumsum += len;
   }
 
   /* Cleanup. */

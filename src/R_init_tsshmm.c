@@ -11,7 +11,7 @@ static const R_CallMethodDef call_methods[] =
   {
    CALLDEF(C_tss, 5),
    CALLDEF(C_viterbi, 2),
-   CALLDEF(C_viterbi_vectorized, 2),
+   CALLDEF(C_viterbi_vectorized, 3),
    { NULL, NULL, 0 }            /* Terminating NULL entry. */
   };
 
