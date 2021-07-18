@@ -169,7 +169,7 @@ hmm_by_strand <- function(signal, bg, ranges) {
     if (strand == "-")
         windows <- endoapply(windows, rev)
     observations <- encode(signal, bg, windows)
-    states <- endoapply(observations, viterbi)
+    states <- viterbi(observations, parallel = TRUE)
     is_promoter <- states > 0
 
     gr <- unlist(windows)

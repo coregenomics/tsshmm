@@ -90,7 +90,7 @@ C_viterbi_vectorized_mt(SEXP hidden_states,
   int* cumsum = Calloc(LENGTH(lengths), int);
   cumsum[0] = 0;
   for (int i = 1; i < LENGTH(lengths); ++i) {
-    cumsum[i] = cumsum[i-1] + INTEGER(lengths)[i];
+    cumsum[i] = cumsum[i-1] + INTEGER(lengths)[i-1];
     if (INTEGER(lengths)[i] > len_max) {
       len_max = INTEGER(lengths)[i];
     }
