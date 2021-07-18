@@ -38,6 +38,7 @@ Imports:
     BiocGenerics,
     Rdpack,
     S4Vectors,
+    futile.logger,
     methods,
     stats
 Suggests:

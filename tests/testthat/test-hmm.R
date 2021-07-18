@@ -1,3 +1,4 @@
+futile.logger::flog.threshold(futile.logger::ERROR)
 ranges <- GRanges(c("chr1:101-300",
                     "chr2:201-450"))
 n <- sum(width(ranges))

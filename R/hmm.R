@@ -2,6 +2,7 @@
 #' @importFrom BiocGenerics relist start score
 #' @importFrom S4Vectors endoapply isSorted mendoapply mcols "mcols<-" runValue
 #'     queryHits subjectHits to
+#' @importFrom futile.logger flog.debug
 #' @importFrom methods as is
 #' @importFrom stats aggregate
 NULL
@@ -147,6 +148,8 @@ hmm <- function(signal, bg, ranges) {
 ## 55%    60%    65%    70%    75%    80%    85%    90%    95%   100%
 ##   3      4      6      9     15     25     47    122    641 191170
 hmm_by_strand <- function(signal, bg, ranges) {
+    flog.debug("Entered hmm_by_strand()")
+    flog.debug("Checking inputs")
     strand <- runValue(strand(signal))
     if (length(strand) == 0L)
         return(GRanges())
@@ -161,15 +164,22 @@ hmm_by_strand <- function(signal, bg, ranges) {
     ## FALSE  TRUE
     ##  80.3  19.7
     ##
+    flog.debug("Trimming regions with no signal")
     has_signal <- scoreOverlaps(ranges, signal) > 0
     if (any(has_signal == 0))
         message(sprintf("Dropping %.1f%% of regions with no signal.",
                         100 * (1 - sum(has_signal) / length(ranges))))
+    flog.debug("Generating windows")
     windows <- tile(ranges[has_signal], width = 10)
-    if (strand == "-")
+    if (strand == "-") {
+        flog.debug("Flip windows for negative strand")
         windows <- endoapply(windows, rev)
+    }
+    flog.debug("Encoding observations as enriched, depleted, or background")
     observations <- encode(signal, bg, windows)
+    flog.debug("Running Viterbi")
     states <- viterbi(observations, parallel = TRUE)
+    flog.debug("Reducing discovered regions")
     is_promoter <- states > 0
 
     gr <- unlist(windows)
@@ -178,11 +188,54 @@ hmm_by_strand <- function(signal, bg, ranges) {
     ## Several hidden states may compose a promoter region, therefore preserve
     ## all states using the with.revmap option.
     gr_reduced <- reduce(gr[unlist(is_promoter)], with.revmap = TRUE)
+    flog.debug("Preserving hidden states")
     gr_reduced$states <- relist(
         gr$states[unlist(is_promoter)][unlist(gr_reduced$revmap)],
         gr_reduced$revmap)
     gr_reduced$revmap <- NULL
+    flog.debug("Exiting hmm_by_strand()")
     gr_reduced
+}
+
+## Running `grl <- tile(gr)` followed by `endoapply(grl, rev)` is extremely
+## slow (tile() is a few seconds, but rev() is about an hour!), therefore we
+## need to support this narrow case for efficient reversed tiles by making
+## slight modifications to the original GenomicRanges::tile() method and it's
+## inner IRanges::tile() call.
+##
+## The few lines changed from this methods have been noted below.  Extraneous
+## lines from the original functions have been removed because don't apply to
+## our narrow use case: in this package, we only care about the `width`
+## argument, and not the `n` argument.
+##
+## Perhaps a patch to GenomicRanges::tile(..., reverse = FALSE) with this
+## efficient feature can be contributed upstream because it would be generally
+## useful for any nascent RNA or DNA sequencing analysis.  If and when such a
+## patch is accepted, then this we can go back to using GenomicRanges::tile()
+## and drop this workaround.
+tile_rev <- function(gr, width) {
+    ## Begin GenomicRanges::tile() [GenomicRanges version 1.45.0]
+    seqnames <- seqnames(x)
+    strand <- strand(x)
+    x <- ranges(x)
+    ## Begin IRanges::tile() [IRanges version 2.27.0]
+    n <- ceiling(width(x) / width)
+    width <- IRanges::width(x) / n
+    ## Begin: lines we're changing.
+    tile.end <- floor(
+        IRanges:::unlist_as_integer(IRanges(rep(1L, length(n)), width = n)) *
+        rep(width, n))
+    tile.end.abs <- tile.end + rep(end(x), n) - 1L
+    ## End: lines we're changing.
+    tile.width <- S4Vectors:::diffWithInitialZero(as.integer(tile.end.abs))
+    p <- IRanges:::PartitioningByWidth(n, names = names(x))
+    tile.width[start(p)] <- tile.end[start(p)]
+    tiles <- relist(IRanges(width = tile.width, end = tile.end.abs), p)
+    ## End: IRanges::tile()
+    gr <- GRanges(rep(seqnames, elementNROWS(tiles)), unlist(tiles),
+                  rep(strand, elementNROWS(tiles)))
+    relist(gr, tiles)
+    ## End GenomicRanges::tile()
 }
 
 replace_unstranded <- function (gr) {
