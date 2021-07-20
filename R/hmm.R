@@ -1,7 +1,8 @@
 #' @import GenomicRanges
 #' @importFrom BiocGenerics relist start score
-#' @importFrom S4Vectors endoapply isSorted mendoapply mcols "mcols<-" runValue
-#'     queryHits subjectHits to
+#' @importFrom IRanges IRanges PartitioningByWidth width
+#' @importFrom S4Vectors elementNROWS endoapply isSorted mendoapply mcols
+#'     "mcols<-" runValue queryHits subjectHits to
 #' @importFrom futile.logger flog.debug
 #' @importFrom methods as is
 #' @importFrom stats aggregate

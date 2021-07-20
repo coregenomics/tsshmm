@@ -36,6 +36,7 @@ Depends:
     GenomicRanges
 Imports:
     BiocGenerics,
+    IRanges,
     Rdpack,
     S4Vectors,
     futile.logger,
