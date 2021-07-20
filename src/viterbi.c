@@ -204,15 +204,3 @@ viterbi_choose_path(int* ret, trellis_t* trellis, int len)
     prev = trellis->nodes[i+1][prev].prev;
   }
 }
-
-void
-viterbi(int* ret, int* obs, int len)
-{
-  trellis_t* trellis = NULL;
-  trellis_init(&trellis, len);
-
-  viterbi_fill_trellis(trellis, obs, len);
-  viterbi_choose_path(ret, trellis, len);
-
-  trellis_destroy(&trellis, len);
-}

@@ -30,7 +30,7 @@ model <- list(
 set.seed(99)
 states_list <- IntegerList()
 obs_list <- IntegerList()
-for (li in seq(1, 100)) {
+for (li in seq(1, 10)) {
     ## Generate the initial hidden value.
     latent <- sample(c("N1", "P1"), 1, prob = c(0.5, 0.5))
     ## Generate the corresponding observation.
@@ -77,29 +77,11 @@ test_that("viterbi decodes enhancer region", {
 })
 
 test_that("viterbi has a vectorized implementation", {
-    states_decoded <- viterbi(obs_list, parallel = FALSE)
+    states_decoded <- viterbi(obs_list)
     expect_type(states_decoded, "S4")
     expect_s4_class(states_decoded, "IntegerList")
     expect_equal(length(states_decoded), length(states_list))
     ## Regression test for seed 99.
-    expect_equal(sum(states_decoded[1:10] == states_list[1:10]),
+    expect_equal(sum(states_decoded == states_list),
                  c(945, 948, 949, 959, 943, 939, 948, 967, 978, 934))
-    ## Compare output with non-vectorized.
-    states_decoded_slow <- endoapply(obs_list, viterbi)
-    expect_equal(states_decoded, states_decoded_slow)
-})
-
-test_that("viterbi has a multi-threaded implementation", {
-    time_non_vec <- system.time(
-        states_non_vec <- endoapply(obs_list, viterbi))["elapsed"]
-    time_non_mt <- system.time(
-        states_non_mt <- viterbi(obs_list, parallel = FALSE))["elapsed"]
-    time <- system.time(
-        states_mt <- viterbi(obs_list, parallel = TRUE))["elapsed"]
-    expect_equal(states_mt, states_non_vec)
-    expect_equal(states_mt, states_non_mt)
-    expect_lte(time, time_non_vec)
-    if (parallel::detectCores() >= 4) {
-        expect_lte(time, time_non_mt)
-    }
 })

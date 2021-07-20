@@ -1,11 +1,6 @@
 #ifndef VITERBI_H
 #define VITERBI_H
 
-/* Viterbi algorithm. */
-
-/* The LENGTH macro ultimately returns an int. */
-void viterbi(int* ret, int* obs, int len);
-
 typedef struct trellis_st trellis_t;
 void trellis_init(trellis_t** trellis, int len);
 void trellis_destroy(trellis_t** trellis, int len);

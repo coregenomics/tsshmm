@@ -175,7 +175,7 @@ hmm_by_strand <- function(signal, bg, ranges) {
     flog.debug("Encoding observations as enriched, depleted, or background")
     observations <- encode(signal, bg, windows)
     flog.debug("Running Viterbi")
-    states <- viterbi(observations, parallel = TRUE)
+    states <- viterbi(observations)
     flog.debug("Reducing discovered regions")
     is_promoter <- states > 0
 
