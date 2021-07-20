@@ -170,11 +170,7 @@ hmm_by_strand <- function(signal, bg, ranges) {
         message(sprintf("Dropping %.1f%% of regions with no signal.",
                         100 * (1 - sum(has_signal) / length(ranges))))
     flog.debug("Generating windows")
-    windows <- tile(ranges[has_signal], width = 10)
-    if (strand == "-") {
-        flog.debug("Flip windows for negative strand")
-        windows <- endoapply(windows, rev)
-    }
+    windows <- tile_with_rev(ranges[has_signal], 10, rev = (strand == "-"))
     flog.debug("Encoding observations as enriched, depleted, or background")
     observations <- encode(signal, bg, windows)
     flog.debug("Running Viterbi")
@@ -213,7 +209,7 @@ hmm_by_strand <- function(signal, bg, ranges) {
 ## useful for any nascent RNA or DNA sequencing analysis.  If and when such a
 ## patch is accepted, then this we can go back to using GenomicRanges::tile()
 ## and drop this workaround.
-tile_rev <- function(gr, width) {
+tile_with_rev <- function(x, width, rev) {
     ## Begin GenomicRanges::tile() [GenomicRanges version 1.45.0]
     seqnames <- seqnames(x)
     strand <- strand(x)
@@ -221,16 +217,25 @@ tile_rev <- function(gr, width) {
     ## Begin IRanges::tile() [IRanges version 2.27.0]
     n <- ceiling(width(x) / width)
     width <- IRanges::width(x) / n
-    ## Begin: lines we're changing.
-    tile.end <- floor(
-        IRanges:::unlist_as_integer(IRanges(rep(1L, length(n)), width = n)) *
-        rep(width, n))
-    tile.end.abs <- tile.end + rep(end(x), n) - 1L
-    ## End: lines we're changing.
-    tile.width <- S4Vectors:::diffWithInitialZero(as.integer(tile.end.abs))
+    ## Begin refactored lines to simplify our change.
+    ir <- IRanges(rep(1L, length(n)), width = n)
+    vec.ref <- sequence(width(ir), from = start(ir))
+    if (rev) {
+        ## Begin lines we're functionally changing.
+        vec.end <- sequence(width(ir), from = end(ir), by = -1L)
+        ## End lines we're functionally changing.
+    } else {
+        vec.end <- vec.ref
+    }
+    tile.end <- floor(vec.end * rep(width, n))
+    tile.ref <- floor(vec.ref * rep(width, n))
+    tile.end.abs <- tile.end + rep(start(x), n) - 1L
+    tile.width <- S4Vectors:::diffWithInitialZero(as.integer(tile.ref))
+    ## End refactored lines to simplify our change.
     p <- IRanges:::PartitioningByWidth(n, names = names(x))
-    tile.width[start(p)] <- tile.end[start(p)]
-    tiles <- relist(IRanges(width = tile.width, end = tile.end.abs), p)
+    tile.width[start(p)] <- tile.ref[start(p)]
+    tiles <- relist(IRanges(width = tile.width,
+                            end = tile.end.abs), p)
     ## End: IRanges::tile()
     gr <- GRanges(rep(seqnames, elementNROWS(tiles)), unlist(tiles),
                   rep(strand, elementNROWS(tiles)))

@@ -38,6 +38,12 @@ test_that("stranded always splits into + and - levels", {
     expect_equal(lengths(stranded(GRanges())),             c("+" = 0, "-" = 0))
 })
 
+test_that("tile_with_rev is equivalent to endoapply(tile(...), rev)", {
+    tiled <- tile(ranges, width = 10)
+    expect_equal(tile_with_rev(ranges, 10, rev = FALSE), tiled)
+    expect_equal(tile_with_rev(ranges, 10, rev = TRUE), endoapply(tiled, rev))
+})
+
 context("hmm")
 
 test_that("hmm_by_strand joins signal regions", {
