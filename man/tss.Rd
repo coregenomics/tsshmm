@@ -4,15 +4,18 @@
 \alias{tss}
 \title{Find promoter peaks using 3 basepair tie-breaking.}
 \usage{
-tss(signal, ranges)
+tss(signal, ranges, pairs = FALSE)
 }
 \arguments{
 \item{signal}{Stranded, single base \code{GRanges} with integer score.}
 
 \item{ranges}{\code{GRanges} to limit signal search.}
+
+\item{pairs}{Whether to embed the \code{GRanges} into a \code{Pairs} object
+with the stranded range in which the TSS was found.}
 }
 \value{
-Stranded, single base \code{GRanges} with integer score.
+Stranded, single base \code{GRanges} with integer score.  If
 }
 \description{
 The original method for extracting the TSS was using 2 basepair windows, but
@@ -52,4 +55,10 @@ signal_both
 tss_both <- tss(signal_both, range(signal_both))
 tss_both
 stopifnot(tss_both == signal_both[4])
+
+# Return Pairs with found region.
+pairs <- tss(signal_both, range(signal_both), pairs = TRUE)
+pairs
+stopifnot(first(pairs) == tss_both)
+stopifnot(second(pairs) == range(signal_both))
 }

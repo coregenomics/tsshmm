@@ -189,3 +189,17 @@ test_that("tss returns strand-specific peaks", {
     tss <- tss(signal, range(signal, ignore.strand = TRUE))
     expect_equal(tss, sort(signal[2:3]))
 })
+
+test_that("tss optionally returns Pairs with query range", {
+    gr <- c(ranges, empty)
+    ol <- findOverlaps(gr, signal)
+    df <- data.frame(i = queryHits(ol),
+                     score = score(signal[subjectHits(ol)]))
+    df <- aggregate(score ~ ., data = df, max)
+    tss <- tss(signal, gr)
+    pairs <- tss(signal, gr, pairs = TRUE)
+    expect_type(pairs, "S4")
+    expect_s4_class(pairs, "Pairs")
+    expect_equal(first(pairs), tss)
+    expect_equal(second(pairs), `strand<-`(ranges, value = "+"))
+})

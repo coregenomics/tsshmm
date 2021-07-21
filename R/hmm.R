@@ -264,7 +264,9 @@ replace_unstranded <- function (gr) {
 #' as a "bonus" value to help break ties.
 #'
 #' @inheritParams hmm
-#' @return Stranded, single base \code{GRanges} with integer score.
+#' @param pairs Whether to embed the \code{GRanges} into a \code{Pairs} object
+#'     with the stranded range in which the TSS was found.
+#' @return Stranded, single base \code{GRanges} with integer score.  If
 #' @examples
 #' # When counts are equal, TSS returns first maximum.
 #' signal <- GRanges(c("chr1:100:+", "chr1:200:+"), score = c(9L, 9L))
@@ -295,8 +297,14 @@ replace_unstranded <- function (gr) {
 #' tss_both <- tss(signal_both, range(signal_both))
 #' tss_both
 #' stopifnot(tss_both == signal_both[4])
+#'
+#' # Return Pairs with found region.
+#' pairs <- tss(signal_both, range(signal_both), pairs = TRUE)
+#' pairs
+#' stopifnot(first(pairs) == tss_both)
+#' stopifnot(second(pairs) == range(signal_both))
 #' @export
-tss <- function(signal, ranges) {
+tss <- function(signal, ranges, pairs = FALSE) {
     ## Find the highest peak within each region using 2 bp windows.  Tiling 2
     ## bp windows is inefficient, so instead use a rolling max in the C layer.
     stopifnot(is(ranges, "GRanges"))
@@ -320,7 +328,9 @@ tss <- function(signal, ranges) {
     .Call(
         C_tss, PACKAGE = "tsshmm", indices_peak, groups, indices_signal,
         starts_signal, scores_signal)
-    signal[indices_peak]
+    if (! pairs) return(signal[indices_peak])
+    indices_groups <- which(indices_signal %in% indices_peak)
+    Pairs(signal[indices_peak], ranges[groups[indices_groups]])
 }
 
 scoreOverlaps <- function(gr, reads) {
