@@ -317,7 +317,6 @@ tss <- function(signal, ranges) {
         scores_signal <- as.integer(scores_signal)
     n_groups <- length(unique(queryHits(ol)))
     indices_peak <- vector("integer", n_groups)
-    scores_peak <- vector("integer", n_groups)
     .Call(
         C_tss, PACKAGE = "tsshmm", indices_peak, groups, indices_signal,
         starts_signal, scores_signal)
