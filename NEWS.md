@@ -1,3 +1,31 @@
+# tsshmm 0.6.0 (2020-07-21)
+
+## New features
+
+- `hmm()` now returns a metadata column containing all hidden states as an
+  `IntegerList()` to inform whether the region is a peaked or non-peaked
+  promoter, with the state of each window to aid visualization of the model
+  behavior output track against the input sequencing data track.
+- The timing and intermediate steps of `hmm()` can be inspected by importing
+  the `futile.flogger` library and setting `flog.threshold(DEBUG)`.
+
+## Significant user-visible changes
+
+- `hmm()` on negative strand data no longer suffers from a large speed penalty.
+  Previously, calculations performed on negative strand were extremely
+  inefficient due to a single call `endoapply(..., rev)` to reverse windows.
+  This call has been eliminated by instead patching `tile()` methods used by
+  `GRanges` and `IRanges` to directly produce reversed windows.
+
+## Bug fixes and improvements
+
+- `viterbi()` has been vectorized at the R layer by allowing for a list of
+  regions to be provided resulting in about a 4x speedup.
+- `viterbi()` has further sped up using OpenMP multithreading at the C layer.
+  The speed of `viterbi()` is now comparable to the speed of `tss()`.
+- Cleaned up `devtools::check()` warnings and notes.
+
+
 # tsshmm 0.5.0 (2020-06-15)
 
 ## Significant user-visible changes
