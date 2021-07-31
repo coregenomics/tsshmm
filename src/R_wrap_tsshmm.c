@@ -6,14 +6,15 @@
 
 SEXP
 C_tss(SEXP indices_peak, SEXP groups, SEXP indices_signal, SEXP starts_signal,
-      SEXP scores_signal)
+      SEXP scores_signal, SEXP prefer_last)
 {
   tss(INTEGER(indices_peak),
       INTEGER(groups),
       INTEGER(indices_signal),
       INTEGER(starts_signal),
       INTEGER(scores_signal),
-      LENGTH(scores_signal));
+      LENGTH(scores_signal),
+      INTEGER(prefer_last));
   return R_NilValue;
 }
 

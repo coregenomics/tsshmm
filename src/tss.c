@@ -2,7 +2,7 @@
 
 void
 tss(int* indices_peak, int* groups, int* indices_signal, int* starts_signal,
-    int* scores_signal, int len)
+    int* scores_signal, int len, int* prefer_last)
 {
   int score_prev = -1;
   int bonus_prev = 0;
@@ -38,7 +38,10 @@ tss(int* indices_peak, int* groups, int* indices_signal, int* starts_signal,
     /* Find max value. */
     if (scores_signal[i] > score_prev ||
         ((scores_signal[i] == score_prev &&
-          bonus > bonus_prev))) {
+	  (prefer_last[g] ?
+	   bonus >= bonus_prev : /* Last peak on negative strand, or */
+	   bonus > bonus_prev)	 /* first peak on positive strand. */
+	  )))  {
       indices_peak[g] = indices_signal[i];
       score_prev = scores_signal[i];
       bonus_prev = bonus;

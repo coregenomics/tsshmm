@@ -325,9 +325,18 @@ tss <- function(signal, ranges, pairs = FALSE) {
         scores_signal <- as.integer(scores_signal)
     n_groups <- length(unique(queryHits(ol)))
     indices_peak <- vector("integer", n_groups)
+    ## For the positive strand, break ties by preferring the first peak, and
+    ## for the negative strand, break ties by preferring the last peak.  This
+    ## choice is based on the ground-truth biological CA-motif at initiation
+    ## sites; originally the negative strand also chose the first peak, but
+    ## this caused the CA-motif (rather the reverse complement TG-motif) to not
+    ## be nearly as enriched as seen on the positive strand, indicating that an
+    ## identical signal peak within the same promoter on the negative strand
+    ## was stealing precedence.
+    prefer_last <- as.integer(strand(ranges[unique(queryHits(ol))]) == "-")
     .Call(
         C_tss, PACKAGE = "tsshmm", indices_peak, groups, indices_signal,
-        starts_signal, scores_signal)
+        starts_signal, scores_signal, prefer_last)
     if (! pairs) return(signal[indices_peak])
     indices_groups <- which(indices_signal %in% indices_peak)
     Pairs(signal[indices_peak], ranges[groups[indices_groups]])

@@ -178,6 +178,19 @@ test_that("tss breaks ties using look head and look behind", {
     expect_equal(tss, signal[4])
 })
 
+test_that("tss breaks ties strand-specifically", {
+    ## Choose the first peak on the positive strand, and last peak on
+    ## the negative strand.
+    signal <- GRanges(c(
+            "chr1:100:+", ## first peak on the positive strand that we want.
+            "chr1:199:+", ## last peak on the positive strand.
+            "chr1:101:-", ## first peak on the negative strand.
+            "chr1:200:-"  ## last peak on the negative strand that we want.
+    ), score = c(9L, 9L, 9L, 9L))
+    tss <- tss(signal, range(signal))
+    expect_equal(tss, signal[c(1, 4)])
+})
+
 test_that("tss returns strand-specific peaks", {
     signal <- GRanges(c("chr1:100:+",
                         "chr1:200:+",
