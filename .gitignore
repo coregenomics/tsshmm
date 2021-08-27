@@ -2,3 +2,10 @@
 Meta
 doc
 inst/doc
+
+# autoconf
+autom4te.cache/
+config.log
+config.status
+configure
+src/Makevars

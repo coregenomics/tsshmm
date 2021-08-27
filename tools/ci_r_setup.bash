@@ -8,3 +8,4 @@ local({
             Ncpus = parallel::detectCores())
 })
 EOF
+autoconf
