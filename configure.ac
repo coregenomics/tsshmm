@@ -13,6 +13,11 @@ m4_define([tsshmm_VERSION],
 dnl Be careful not to introduce any trailing newlines.
 m4_esyscmd([awk '/^Version/ {printf "%s", $NF; exit 0}' DESCRIPTION]))
 AC_INIT([tsshmm], [m4_defn([tsshmm_VERSION])])
+# Use R-specific flags per
+# https://cran.r-project.org/doc/manuals/r-release/R-exts.html#Configure-and-cleanup
+CC=`"${R_HOME}/bin/R" CMD config CC`
+CFLAGS=`"${R_HOME}/bin/R" CMD config CFLAGS`
+LDFLAGS=`"${R_HOME}/bin/R" CMD config LDFLAGS`
 AC_LANG([C])
 AC_OPENMP
 
