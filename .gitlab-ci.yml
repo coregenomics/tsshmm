@@ -5,6 +5,11 @@ before_script:
 
 test:
   script:
+    # Install devscripts for for devtools::check() to inspect configure:
+    # https://cran.r-project.org/doc/manuals/r-release/R-exts.html#FOOT26
+    - apt -qqq update
+    - apt -qqq install devscripts
+    # The usual.
     - Rscript -e 'system.time(devtools::install(dependencies = TRUE, quiet = TRUE))'
     - Rscript -e 'devtools::check(vignettes = FALSE)'
   cache:
