@@ -1,13 +1,12 @@
 dnl tsshmm requires OpenMP and the general hidden Markov model (GHMM)
 dnl library.
 dnl
-dnl GHMM does not yet distribute a pkg-config file, but the package
-dnl includes it's own configuration tool ghmm-config:
+dnl GHMM does not yet distribute a pkg-config file, but the package includes
+dnl it's own configuration tool ghmm-config:
 dnl https://sourceforge.net/p/ghmm/code/HEAD/tree/trunk/ghmm/tools/ghmm-config.in
-dnl This script will optionally use ghmm-config if present.  We cannot
-dnl strictly rely on ghmm-config because a major operating system,
-dnl Debian, neglects to include gmm-config tool with it's libghmm-dev
-dnl package for some reason.
+dnl This script will optionally use ghmm-config if present.  We cannot strictly
+dnl rely on ghmm-config because a major operating system, Debian, neglects to
+dnl include gmm-config tool with it's libghmm-dev package for some reason.
 
 m4_define(tsshmm_VERSION,
 dnl Be careful not to introduce any trailing newlines.
@@ -25,13 +24,13 @@ AC_OPENMP
 AC_ARG_WITH(ghmm,
             AS_HELP_STRING(--with-ghmm=GHMM_ROOT_OR_SEARCH_STRATEGY,
                            [path to GHMM installation, or a search strategy
-			    of either "system", "bundled", or "fallback";
-			    the last strategy first searches for GHMM in
-			    system library paths -
-			    including CPATH and LD_LIBRARY_PATH -
-			    if that fails then fall back to using
-			    the bundled GHMM library
-			    @<:@default=bundled@:>@]
+                            of either "system", "bundled", or "fallback";
+                            the last strategy first searches for GHMM in
+                            system library paths -
+                            including CPATH and LD_LIBRARY_PATH -
+                            if that fails then fall back to using
+                            the bundled GHMM library
+                            @<:@default=bundled@:>@]
              )], # AS_HELP_STRING
              # action-if-given
              [],
@@ -39,8 +38,8 @@ AC_ARG_WITH(ghmm,
              [: m4_divert_text([DEFAULTS], [with_ghmm=bundled])]
 ) # AC_ARG_WITH
 
-# Overwrite the user preference --with-ghmm with the environmental
-# variable GHMM_ROOT if set.
+# Overwrite the user preference --with-ghmm with the environmental variable
+# GHMM_ROOT if set.
 AC_MSG_CHECKING(for GHMM_ROOT environmental variable)
 AS_IF(test "x$GHMM_ROOT" != x,
       dnl run-if-true
@@ -89,16 +88,16 @@ AS_IF(test x$force_ghmm_root != xyes,
                xbundled, with_ghmm_strategy=bundled,
                xfallback, with_ghmm_strategy=fallback,
                # default
-	       with_ghmm_strategy=no
+               with_ghmm_strategy=no
       )] # AS_CASE
       [AS_IF(test x$with_ghmm_strategy != xno,
              AC_MSG_RESULT($with_ghmm_strategy),
-	     [AC_MSG_RESULT([invalid, but might be --with-ghmm=GHMM_ROOT])]
+             [AC_MSG_RESULT([invalid, but might be --with-ghmm=GHMM_ROOT])]
       )] # AC_IF
 ) # AS_IF
 #
-# Is GHMM_ROOT from the environmental variable or from --with-ghmm a
-# valid path?  Either is a valid path invalid path or invalid input.
+# Is GHMM_ROOT from the environmental variable or from --with-ghmm a valid
+# path?  Either is a valid path invalid path or invalid input.
 AS_IF([test x$with_ghmm_strategy = x],
       AC_MSG_NOTICE(checking whether GHMM_ROOT=$with_ghmm is a valid path)
       AC_CHECK_FILE($with_ghmm, [with_ghmm_strategy=no],
@@ -108,8 +107,8 @@ AS_IF([test x$with_ghmm_strategy = x],
 
 # If GHMM_ROOT was provided, find the header and library paths.
 #
-# Check for the existance of include/ and lib/ sub-directories and if
-# both are present add them to CFLAGS and LDFLAGS per
+# Check for the existance of include/ and lib/ sub-directories and if both are
+# present add them to CFLAGS and LDFLAGS per
 # https://stackoverflow.com/a/44534707
 AS_IF(test x$with_ghmm_strategy = xno,
       AC_SUBST(GHMM_CFLAGS)
@@ -120,7 +119,7 @@ AS_IF(test x$with_ghmm_strategy = xno,
                     AC_MSG_FAILURE(GHMM header not found.))
       AC_CHECK_FILE($with_ghmm/lib/libghmm.so,
                     GHMM_LDFLAGS="-Wl,-rpath=$with_ghmm/lib -L$with_ghmm/lib"
-		    GHMM_LIBS="-lghmm",
+                    GHMM_LIBS="-lghmm",
                     AC_MSG_FAILURE(GHMM library not found.))
 ) # AS_IF
 
