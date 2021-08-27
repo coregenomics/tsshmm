@@ -17,6 +17,7 @@ AC_INIT([tsshmm], [m4_defn([tsshmm_VERSION])])
 # https://cran.r-project.org/doc/manuals/r-release/R-exts.html#Configure-and-cleanup
 CC=`"${R_HOME}/bin/R" CMD config CC`
 CFLAGS=`"${R_HOME}/bin/R" CMD config CFLAGS`
+LDFLAGS=`"${R_HOME}/bin/R" CMD config LDFLAGS`
 AC_LANG([C])
 AC_OPENMP
 
