@@ -123,7 +123,7 @@ AS_IF([test x$with_ghmm_strategy = xno],
                      [AC_MSG_FAILURE(GHMM library not found.)])]
 ) # AS_IF
 
-AS_IF([test x$with_ghmm_strategy = xsystem -o
+AS_IF([test x$with_ghmm_strategy = xsystem -o \
             x$with_ghmm_strategy = xfallback],
       # Check for system or LD_LIBRARY_PATH installed GHMM.
       [AC_CHECK_LIB([ghmm], [ghmm_dmodel_check])]
@@ -132,7 +132,7 @@ AS_IF([test x$with_ghmm_strategy = xsystem -o
 ) # AS_IF
 
 # FIXME: Implement bundled dependency.
-AS_IF([test x$with_ghmm_strategy = xbundled -o
+AS_IF([test x$with_ghmm_strategy = xbundled -o \
             x$with_ghmm_strategy = xfallback],
       [AC_MSG_FAILURE(--with-ghmm=bundled is not yet supported.)])
 dnl AC_CONFIG_SUBDIRS([ghmm-0.9-rc3])
