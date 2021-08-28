@@ -3,4 +3,8 @@
 ^\.gitlab-ci\.yml$
 ^doc$
 ^library$
+^tools/.+\.m4$
 ^tools/ci_r_setup\.yaml$
+^tools/config\..*$
+^tools/depcomp$
+^tools/ltmain.sh$

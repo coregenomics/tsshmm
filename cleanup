@@ -1,2 +1,6 @@
 #!/bin/sh
-rm -f src/Makevars
+for dir in src src/ghmm-0.9-rc3; do
+    if test -f $dir/Makefile; then
+	make -C $dir distclean
+    fi
+done

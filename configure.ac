@@ -8,17 +8,32 @@ dnl This script will optionally use ghmm-config if present.  We cannot strictly
 dnl rely on ghmm-config because a major operating system, Debian, neglects to
 dnl include gmm-config tool with it's libghmm-dev package for some reason.
 
+m4_include([tools/aclocal.m4])
+m4_include([tools/libtool.m4])
+m4_include([tools/ltoptions.m4])
+m4_include([tools/ltsugar.m4])
+m4_include([tools/ltversion.m4])
+m4_include([tools/lt~obsolete.m4])
+m4_include([tools/m4_ax_subdirs_configure.m4])
+
 m4_define(tsshmm_VERSION,
 dnl Be careful not to introduce any trailing newlines.
 m4_esyscmd([awk '/^Version/ {printf "%s", $NF; exit 0}' DESCRIPTION]))
 AC_INIT(tsshmm, m4_defn([tsshmm_VERSION]))
+AC_CONFIG_AUX_DIR([tools])
+AC_CONFIG_MACRO_DIR([tools])
+AM_INIT_AUTOMAKE
+LT_INIT([disable-static])
 # Use R-specific flags per
 # https://cran.r-project.org/doc/manuals/r-release/R-exts.html#Configure-and-cleanup
 CC=`"${R_HOME}/bin/R" CMD config CC`
 CFLAGS=`"${R_HOME}/bin/R" CMD config CFLAGS`
+CPPFLAGS=`"${R_HOME}/bin/R" CMD config --cppflags`
 LDFLAGS=`"${R_HOME}/bin/R" CMD config LDFLAGS`
 AC_LANG(C)
 AC_OPENMP
+AC_PROG_CC
+AC_PROG_INSTALL
 
 # Read in any --with-ghmm user preference.
 AC_ARG_WITH(ghmm,
@@ -115,7 +130,7 @@ AS_IF(test x$with_ghmm_strategy = xno,
       AC_SUBST(GHMM_LDFLAGS)
       AC_SUBST(GHMM_LIBS)
       AC_CHECK_FILE($with_ghmm/include/ghmm/ghmm.h,
-                    GHMM_CFLAGS="-I$with_ghmm/include",
+                    GHMM_CPPFLAGS="-I$with_ghmm/include",
                     AC_MSG_FAILURE(GHMM header not found.))
       AC_CHECK_FILE($with_ghmm/lib/libghmm.so,
                     GHMM_LDFLAGS="-Wl,-rpath=$with_ghmm/lib -L$with_ghmm/lib"
@@ -134,18 +149,15 @@ AS_IF(test x$with_ghmm_strategy = xsystem -o \
 # Use bundled dependency if necessary.
 AS_IF(test x$with_ghmm_strategy = xbundled -o \
            x$with_ghmm_strategy = xfallback,
-      AC_CONFIG_AUX_DIR([tools])
-      AC_CONFIG_MACRO_DIR([tools])
-      m4_include([tools/m4_ax_subdirs_configure.m4])
-      AC_PROG_INSTALL
       [AX_SUBDIRS_CONFIGURE([src/ghmm-0.9-rc3],
                             [[--enable-gsl=no],
                              [--disable-gsltest],
                              [--with-rng=mt],
                              [--with-python=no],
+                             [--libdir=$PWD/libs],
                              [--prefix=$PWD/src/libunix]])]
       GHMM_ROOT="src/ghmm-0.9-rc3/ghmm"
-      GHMM_CFLAGS="-I$GHMM_ROOT"
+      GHMM_CPPFLAGS="-I$GHMM_ROOT"
       # Using -rpath=. prefers the bundled over any system installation.
       [GHMM_LDFLAGS="-Wl,-rpath=. -L$GHMM_ROOT/.lib"]
       GHMM_LIBS="-lghmm"
@@ -166,12 +178,13 @@ AS_ECHO
 AS_ECHO("             CC = $CC")
 AS_ECHO
 AS_ECHO("         CFLAGS = $CFLAGS")
+AS_ECHO("       CPPFLAGS = $CPPFLAGS")
 AS_ECHO("        LDFLAGS = $LDFLAGS")
 AS_ECHO("           LIBS = $LIBS")
 AS_ECHO
 AS_ECHO("  OPENMP_CFLAGS = $OPENMP_CFLAGS")
 AS_ECHO
-AS_ECHO("    GHMM_CFLAGS = $GHMM_CFLAGS")
+AS_ECHO("  GHMM_CPPFLAGS = $GHMM_CPPFLAGS")
 AS_ECHO("   GHMM_LDFLAGS = $GHMM_LDFLAGS")
 AS_ECHO("      GHMM_LIBS = $GHMM_LIBS")
 AS_ECHO
@@ -180,5 +193,5 @@ AS_ECHO(" C_INCLUDE_PATH = $C_INCLUDE_PATH")
 AS_ECHO("LD_LIBRARY_PATH = $LD_LIBRARY_PATH")
 AS_ECHO
 
-AC_CONFIG_FILES([src/Makevars])
+AC_CONFIG_FILES([src/Makefile])
 AC_OUTPUT
