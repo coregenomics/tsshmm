@@ -23,3 +23,5 @@ clean-local :
 	rm -f tsshmm.so libghmm.so
 
 distclean-local : clean-local
+
+.PHONY : all-local clean-local distclean-local
