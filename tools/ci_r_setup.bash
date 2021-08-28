@@ -25,7 +25,7 @@ popd || exit
 libtoolize --quiet
 # aclocal generates: tools/aclocal.m4
 aclocal --output=tools/aclocal.m4
-# automake generates: tools/{compile,install-sh,missing}
-automake --add-missing
 # autoconf generates: configure
 autoconf
+# automake generates: tools/{compile,install-sh,missing}
+automake --add-missing

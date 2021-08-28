@@ -126,7 +126,7 @@ AS_IF([test x$with_ghmm_strategy = x],
 # present add them to CFLAGS and LDFLAGS per
 # https://stackoverflow.com/a/44534707
 AS_IF(test x$with_ghmm_strategy = xno,
-      AC_SUBST(GHMM_CFLAGS)
+      AC_SUBST(GHMM_CPPFLAGS)
       AC_SUBST(GHMM_LDFLAGS)
       AC_SUBST(GHMM_LIBS)
       AC_CHECK_FILE($with_ghmm/include/ghmm/ghmm.h,
@@ -149,6 +149,8 @@ AS_IF(test x$with_ghmm_strategy = xsystem -o \
 # Use bundled dependency if necessary.
 AS_IF(test x$with_ghmm_strategy = xbundled -o \
            x$with_ghmm_strategy = xfallback,
+      AC_SUBST(GHMM_ROOT)
+      AM_CONDITIONAL(BUNDLED_GHMM, true)
       [AX_SUBDIRS_CONFIGURE([src/ghmm-0.9-rc3],
                             [[--enable-gsl=no],
                              [--disable-gsltest],
@@ -156,10 +158,10 @@ AS_IF(test x$with_ghmm_strategy = xbundled -o \
                              [--with-python=no],
                              [--libdir=$PWD/libs],
                              [--prefix=$PWD/src/libunix]])]
-      GHMM_ROOT="src/ghmm-0.9-rc3/ghmm"
-      GHMM_CPPFLAGS="-I$GHMM_ROOT"
+      GHMM_ROOT="ghmm-0.9-rc3/ghmm"
+      GHMM_CPPFLAGS="-Isrc/$GHMM_ROOT"
       # Using -rpath=. prefers the bundled over any system installation.
-      [GHMM_LDFLAGS="-Wl,-rpath=. -L$GHMM_ROOT/.lib"]
+      [GHMM_LDFLAGS="-Wl,-rpath=. -Lsrc/$GHMM_ROOT/.lib"]
       GHMM_LIBS="-lghmm"
       # Patch bug in upstream's configure bug:
       #
