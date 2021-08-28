@@ -131,11 +131,34 @@ AS_IF(test x$with_ghmm_strategy = xsystem -o \
       [AC_CHECK_HEADERS(ghmm/ghmm.h)]
 ) # AS_IF
 
-# FIXME: Implement bundled dependency.
-AS_IF([test x$with_ghmm_strategy = xbundled -o \
-            x$with_ghmm_strategy = xfallback],
-      [AC_MSG_FAILURE(--with-ghmm=bundled is not yet supported.)])
-dnl AC_CONFIG_SUBDIRS([ghmm-0.9-rc3])
+# Use bundled dependency if necessary.
+AS_IF(test x$with_ghmm_strategy = xbundled -o \
+           x$with_ghmm_strategy = xfallback,
+      AC_CONFIG_AUX_DIR([tools])
+      AC_CONFIG_MACRO_DIR([tools])
+      m4_include([tools/m4_ax_subdirs_configure.m4])
+      AC_PROG_INSTALL
+      [AX_SUBDIRS_CONFIGURE([src/ghmm-0.9-rc3],
+                            [[--enable-gsl=no],
+                             [--disable-gsltest],
+                             [--with-rng=mt],
+                             [--with-python=no],
+                             [--prefix=$PWD/src/libunix]])]
+      GHMM_ROOT="src/ghmm-0.9-rc3/ghmm"
+      GHMM_CFLAGS="-I$GHMM_ROOT"
+      # Using -rpath=. prefers the bundled over any system installation.
+      [GHMM_LDFLAGS="-Wl,-rpath=. -L$GHMM_ROOT/.lib"]
+      GHMM_LIBS="-lghmm"
+      # Patch bug in upstream's configure bug:
+      #
+      #     config.status: executing libtool commands
+      #     /usr/bin/rm: cannot remove 'libtoolT': No such file or directory
+      #
+      # ... it's not yet clear how to fix upstream's configure.ac.  The command
+      # below is idempotent due to the regex address match prefix, so rerunning
+      # the patch when rerunning ./configure has no adverse effect.
+      sed -i "/RM='@<:@^f@:>@*'/s/'$/ -f'/" src/ghmm-0.9-rc3/configure
+) # AS_IF
 
 AS_ECHO
 AS_BOX(Configuration of $PACKAGE_STRING)
