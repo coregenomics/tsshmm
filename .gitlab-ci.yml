@@ -12,7 +12,7 @@ test:
     # We also need libtool.
     - apt -qqq install libtool
     # The usual.
-    - sh tools/autogen.sh
+    - sh -x tools/autogen.sh
     - Rscript -e 'system.time(devtools::install(dependencies = TRUE, quiet = TRUE))'
     - Rscript -e 'devtools::check(vignettes = FALSE, error_on = "error")'
   cache:
