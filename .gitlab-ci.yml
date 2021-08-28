@@ -9,6 +9,8 @@ test:
     # https://cran.r-project.org/doc/manuals/r-release/R-exts.html#FOOT26
     - apt -qqq update
     - apt -qqq install devscripts
+    # We also need libtool.
+    - apt -qqq install libtool
     # The usual.
     - Rscript -e 'system.time(devtools::install(dependencies = TRUE, quiet = TRUE))'
     - Rscript -e 'devtools::check(vignettes = FALSE)'
