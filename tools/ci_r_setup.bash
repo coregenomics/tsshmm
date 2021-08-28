@@ -16,16 +16,3 @@ EOF
 pushd src/ || exit
 tar -xf ghmm-0.9-rc3.tar.gz
 popd || exit
-# We cannot use autoreconf because we don't want to dirty our parent directory
-# and fail R CMD check, and instead want to store all autotools output files
-# inside tools/
-#
-# libtoolize generates: tools/{ltmain.sh,libtool.m4,ltoptions.m4,ltsugar.m4}
-#                       tools/{ltversion.m4,lt~obsolete.m4}
-libtoolize --quiet
-# aclocal generates: tools/aclocal.m4
-aclocal --output=tools/aclocal.m4
-# autoconf generates: configure
-autoconf
-# automake generates: tools/{compile,install-sh,missing}
-automake --add-missing
