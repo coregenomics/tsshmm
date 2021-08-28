@@ -13,7 +13,7 @@ test:
     - apt -qqq install libtool
     # The usual.
     - Rscript -e 'system.time(devtools::install(dependencies = TRUE, quiet = TRUE))'
-    - Rscript -e 'devtools::check(vignettes = FALSE)'
+    - Rscript -e 'devtools::check(vignettes = FALSE, error_on = "error")'
   cache:
     paths:
       - library/
