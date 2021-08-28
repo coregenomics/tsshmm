@@ -13,9 +13,10 @@ tsshmm_la_SOURCES  = R_init_tsshmm.c R_wrap_tsshmm.c tss.c viterbi.c
 # Hook that runs after the default "all" rule.
 all-local :
 	cp -av .libs/tsshmm.so.0.0.0 tsshmm.so
+	chmod -x tsshmm.so
 if BUNDLED_GHMM
 	cp -av @GHMM_ROOT@/.libs/libghmm.so.1.0.0 libghmm.so
-	chmod -x tsshmm.so libghmm.so
+	chmod -x libghmm.so
 endif
 
 clean-local :
