@@ -37,12 +37,12 @@ AC_ARG_WITH(ghmm,
                             including CPATH and LD_LIBRARY_PATH -
                             if that fails then fall back to using
                             the bundled GHMM library
-                            @<:@default=bundled@:>@]
+                            @<:@default=fallback@:>@]
              )], # AS_HELP_STRING
              # action-if-given
              [],
              # action-if-not-given
-             [: m4_divert_text([DEFAULTS], [with_ghmm=bundled])]
+             [: m4_divert_text([DEFAULTS], [with_ghmm=fallback])]
 ) # AC_ARG_WITH
 
 # Overwrite the user preference --with-ghmm with the environmental variable
@@ -132,15 +132,28 @@ AS_IF(test x$with_ghmm_strategy = xno,
 
 AS_IF(test x$with_ghmm_strategy = xsystem -o \
            x$with_ghmm_strategy = xfallback,
+      AS_IF(test x$with_ghmm_strategy = xsystem,
+            AC_MSG_NOTICE(Checking GHMM only on system),
+	    AC_MSG_NOTICE(Checking GHMM on system))
       # Check for system or LD_LIBRARY_PATH installed GHMM.
-      AC_CHECK_LIB(ghmm, ghmm_dmodel_check)
+      AC_CHECK_LIB(ghmm, ghmm_dmodel_check, found_ghmm_system_lib=yes)
       # Check for system or CPATH / C_INCLUDE_PATH GHMM.
-      [AC_CHECK_HEADERS(ghmm/ghmm.h)]
+      [AC_CHECK_HEADERS(ghmm/ghmm.h, found_ghmm_system_headers=yes)]
+      AS_IF(test x$found_ghmm_system_lib = xyes -a \
+                 x$found_ghmm_system_headers = xyes,
+            found_ghmm_system=yes
+	    AC_MSG_NOTICE(GHMM found on system.),
+	    AC_MSG_FAILURE(GHMM library not found.))
 ) # AS_IF
 
 # Use bundled dependency if necessary.
-AS_IF(test x$with_ghmm_strategy = xbundled -o \
+AM_CONDITIONAL(BUNDLED_GHMM, false)
+AS_IF(test x$found_ghmm_system != xyes &&
+      test x$with_ghmm_strategy = xbundled -o \
            x$with_ghmm_strategy = xfallback,
+      AS_IF(test x$with_ghmm_strategy = xbundled,
+            AC_MSG_NOTICE(Using bundled GHMM),
+	    AC_MSG_NOTICE(Falling back to using bundled GHMM))
       AC_SUBST(GHMM_ROOT)
       AM_CONDITIONAL(BUNDLED_GHMM, true)
       [AX_SUBDIRS_CONFIGURE([src/ghmm-0.9-rc3],
