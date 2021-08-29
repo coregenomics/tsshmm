@@ -4,8 +4,8 @@
 # libtoolize generates: tools/{ltmain.sh,libtool.m4,ltoptions.m4,ltsugar.m4}
 #                       tools/{ltversion.m4,lt~obsolete.m4}
 libtoolize --quiet
-# aclocal generates: tools/aclocal.m4
-aclocal --output=tools/aclocal.m4
+# aclocal generates: aclocal.m4
+aclocal
 # autoconf generates: configure
 autoconf
 # automake generates: tools/{compile,install-sh,missing}

@@ -8,14 +8,6 @@ dnl This script will optionally use ghmm-config if present.  We cannot strictly
 dnl rely on ghmm-config because a major operating system, Debian, neglects to
 dnl include gmm-config tool with it's libghmm-dev package for some reason.
 
-m4_include([tools/aclocal.m4])
-m4_include([tools/libtool.m4])
-m4_include([tools/ltoptions.m4])
-m4_include([tools/ltsugar.m4])
-m4_include([tools/ltversion.m4])
-m4_include([tools/lt~obsolete.m4])
-m4_include([tools/m4_ax_subdirs_configure.m4])
-
 m4_define(tsshmm_VERSION,
 dnl Be careful not to introduce any trailing newlines.
 m4_esyscmd([awk '/^Version/ {printf "%s", $NF; exit 0}' DESCRIPTION]))

@@ -11,7 +11,7 @@ configure
 src/Makefile
 
 # aclocal
-tools/aclocal.m4
+aclocal.m4
 
 # automake
 src/Makefile.in
