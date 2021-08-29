@@ -142,8 +142,9 @@ AS_IF(test x$with_ghmm_strategy = xsystem -o \
       AS_IF(test x$found_ghmm_system_lib = xyes -a \
                  x$found_ghmm_system_headers = xyes,
             found_ghmm_system=yes
-	    AC_MSG_NOTICE(GHMM found on system.),
-	    AC_MSG_FAILURE(GHMM library not found.))
+            AC_MSG_NOTICE(GHMM found on system.),
+            AS_IF(test x$with_ghmm_strategy = xsystem,
+                  AC_MSG_FAILURE(GHMM library not found.)))
 ) # AS_IF
 
 # Use bundled dependency if necessary.
