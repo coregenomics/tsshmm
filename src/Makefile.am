@@ -14,12 +14,24 @@ tsshmm_la_LIBS     = $(PKG_LIBS)
 tsshmm_la_SOURCES  = R_init_tsshmm.c R_wrap_tsshmm.c tss.c viterbi.c
 
 # Hook that runs after the default "all" rule.
-all-local :
-	cp -av .libs/tsshmm.so.0.0.0 tsshmm.so
-	chmod -x tsshmm.so
 if BUNDLED_GHMM
-	cp -av @GHMM_ROOT@/.libs/libghmm.so.1.0.0 libghmm.so
-	chmod -x libghmm.so
+all-local : tsshmm.so libghmm.so
+else
+all-local : tsshmm.so
+endif
+
+# One of the limitations with POSIX-compliant `make` is not being able to
+# specify multiple outputs from a single rule.  Therefore, even though libtool
+# links and produces multiple files, the only explicit rule we can depend on is
+# the .la output file.
+tsshmm.so : tsshmm.la
+	cp -av .libs/tsshmm.so.0.0.0 $@
+	chmod -x $@
+
+if BUNDLED_GHMM
+libghmm.so : @GHMM_ROOT@/libghmm.la
+	cp -av @GHMM_ROOT@/.libs/libghmm.so.1.0.0 $@
+	chmod -x $@
 endif
 
 clean-local :
