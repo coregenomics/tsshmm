@@ -112,21 +112,20 @@ AS_IF([test x$with_ghmm_strategy = x],
       ) # AC_CHECK_FILE
 ) # AS_IF
 
-# If GHMM_ROOT was provided, find the header and library paths.
+AC_SUBST(GHMM_LIBS, -lghmm)
+
+# If GHMM_ROOT was provided, set the header and library paths.
 #
 # Check for the existance of include/ and lib/ sub-directories and if both are
 # present add them to CFLAGS and LDFLAGS per
 # https://stackoverflow.com/a/44534707
 AS_IF(test x$with_ghmm_strategy = xno,
-      AC_SUBST(GHMM_CPPFLAGS)
-      AC_SUBST(GHMM_LDFLAGS)
-      AC_SUBST(GHMM_LIBS)
       AC_CHECK_FILE($with_ghmm/include/ghmm/ghmm.h,
-                    GHMM_CPPFLAGS="-I$with_ghmm/include",
+                    [AC_SUBST(GHMM_CPPFLAGS, ["-I$with_ghmm/include"])]
                     AC_MSG_FAILURE(GHMM header not found.))
       AC_CHECK_FILE($with_ghmm/lib/libghmm.so,
-                    GHMM_LDFLAGS="-Wl,-rpath=$with_ghmm/lib -L$with_ghmm/lib"
-                    GHMM_LIBS="-lghmm",
+                    [AC_SUBST(GHMM_LDFLAGS,
+                              ["-Wl,-rpath=$with_ghmm/lib -L$with_ghmm/lib"])],
                     AC_MSG_FAILURE(GHMM library not found.))
 ) # AS_IF
 
@@ -134,7 +133,7 @@ AS_IF(test x$with_ghmm_strategy = xsystem -o \
            x$with_ghmm_strategy = xfallback,
       AS_IF(test x$with_ghmm_strategy = xsystem,
             AC_MSG_NOTICE(Checking GHMM only on system),
-	    AC_MSG_NOTICE(Checking GHMM on system))
+            AC_MSG_NOTICE(Checking GHMM on system))
       # Check for system or LD_LIBRARY_PATH installed GHMM.
       AC_CHECK_LIB(ghmm, ghmm_dmodel_check, found_ghmm_system_lib=yes)
       # Check for system or CPATH / C_INCLUDE_PATH GHMM.
@@ -154,8 +153,7 @@ AS_IF(test x$found_ghmm_system != xyes &&
            x$with_ghmm_strategy = xfallback,
       AS_IF(test x$with_ghmm_strategy = xbundled,
             AC_MSG_NOTICE(Using bundled GHMM),
-	    AC_MSG_NOTICE(Falling back to using bundled GHMM))
-      AC_SUBST(GHMM_ROOT)
+            AC_MSG_NOTICE(Falling back to using bundled GHMM))
       AM_CONDITIONAL(BUNDLED_GHMM, true)
       [AX_SUBDIRS_CONFIGURE([src/ghmm-0.9-rc3],
                             [[--enable-gsl=no],
@@ -164,11 +162,13 @@ AS_IF(test x$found_ghmm_system != xyes &&
                              [--with-python=no],
                              [--libdir=$PWD/libs],
                              [--prefix=$PWD/src/libunix]])]
-      GHMM_ROOT="ghmm-0.9-rc3/ghmm"
-      GHMM_CPPFLAGS="-Isrc/$GHMM_ROOT"
+      # Our recursive automake rule needs the absolute path of GHMM_ROOT.
+      [AC_SUBST(GHMM_ROOT, ["$PWD/src/ghmm-0.9-rc3/ghmm"])]
+      [AC_CHECK_FILE($GHMM_ROOT, [],
+                     AC_MSG_FAILURE(Directory of bundled GHMM not found.))]
+      [AC_SUBST(GHMM_CPPFLAGS, ["-I$GHMM_ROOT"])]
       # Using -rpath=. prefers the bundled over any system installation.
-      [GHMM_LDFLAGS="-Wl,-rpath=. -Lsrc/$GHMM_ROOT/.lib"]
-      GHMM_LIBS="-lghmm"
+      [AC_SUBST(GHMM_LDFLAGS, ["-Wl,-rpath=. -L$GHMM_ROOT/.lib"])]
       # Patch bug in upstream's configure bug:
       #
       #     config.status: executing libtool commands
@@ -192,6 +192,7 @@ AS_ECHO("           LIBS = $LIBS")
 AS_ECHO
 AS_ECHO("  OPENMP_CFLAGS = $OPENMP_CFLAGS")
 AS_ECHO
+AS_ECHO("      GHMM_ROOT = $GHMM_ROOT")
 AS_ECHO("  GHMM_CPPFLAGS = $GHMM_CPPFLAGS")
 AS_ECHO("   GHMM_LDFLAGS = $GHMM_LDFLAGS")
 AS_ECHO("      GHMM_LIBS = $GHMM_LIBS")
