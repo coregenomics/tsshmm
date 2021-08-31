@@ -1,8 +1,29 @@
 #include "R_wrap_tsshmm.h"
+#include "models.h"
 #include "tss.h"
 #include "viterbi.h"
 
 /* Wrap C functions to accept R S-expression object arguments. */
+
+void
+C_model_destroy(SEXP external_pointer)
+{
+  ghmm_dmodel* model = R_ExternalPtrAddr(external_pointer);
+  R_ClearExternalPtr(external_pointer);
+  ghmm_dmodel_free(&model);
+}
+
+SEXP
+C_model_tsshmm(SEXP external_pointer)
+{
+  ghmm_dmodel* model = NULL;
+  model_tsshmm(&model);
+  R_SetExternalPtrAddr(external_pointer, model);
+  /* Destroy the model when the R object is garbage collected, including on
+     exit of R. */
+  R_RegisterCFinalizerEx(external_pointer, C_model_destroy, TRUE);
+  return R_NilValue;
+}
 
 SEXP
 C_tss(SEXP indices_peak, SEXP groups, SEXP indices_signal, SEXP starts_signal,

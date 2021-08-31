@@ -3,4 +3,5 @@
 ^\.gitlab-ci\.yml$
 ^doc$
 ^library$
+^src/\.dir-locals\.el$
 ^tools/ci_r_setup\.yaml$
