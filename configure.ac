@@ -166,9 +166,9 @@ AS_IF(test x$found_ghmm_system != xyes &&
       [AC_SUBST(GHMM_ROOT, ["$PWD/src/ghmm-0.9-rc3/ghmm"])]
       [AC_CHECK_FILE($GHMM_ROOT, [],
                      AC_MSG_FAILURE(Directory of bundled GHMM not found.))]
-      [AC_SUBST(GHMM_CPPFLAGS, ["-I$GHMM_ROOT"])]
+      [AC_SUBST(GHMM_CPPFLAGS, ["-I$GHMM_ROOT/.."])]
       # Using -rpath=. prefers the bundled over any system installation.
-      [AC_SUBST(GHMM_LDFLAGS, ["-Wl,-rpath=. -L$GHMM_ROOT/.lib"])]
+      [AC_SUBST(GHMM_LDFLAGS, ["-Wl,-rpath=. -L$GHMM_ROOT/.libs"])]
       # Patch bug in upstream's configure bug:
       #
       #     config.status: executing libtool commands
