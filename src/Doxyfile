@@ -1,0 +1,20 @@
+PROJECT_NAME           = "TSSHMM"
+PROJECT_NUMBER         = 0.6.0
+PROJECT_BRIEF          = "Transcription start site (TSS) hidden Markov model, built against the general hidden Markov model (GHMM) library"
+OUTPUT_DIRECTORY       = doc
+OPTIMIZE_OUTPUT_FOR_C  = YES
+FILE_PATTERNS          = *.c \
+                         *.h
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
+QUIET                  = YES
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_MAN           = YES
+CLASS_DIAGRAMS         = NO
+INCLUDE_PATH           = /usr/share/R/include ghmm-0.9-rc3
+MACRO_EXPANSION        = YES
+SEARCH_INCLUDES        = YES
+ENABLE_PREPROCESSING   = YES
+SKIP_FUNCTION_MACROS   = NO

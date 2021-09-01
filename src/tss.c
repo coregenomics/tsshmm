@@ -1,5 +1,26 @@
+/** @file
+
+    @brief Find peaks using 3 basepair tie-breaking.
+ */
+
 #include "tss.h"
 
+/** Find peaks using 3 basepair tie-breaking.
+
+    The original method for extracting the TSS was using 2 basepair windows,
+    but note that this detail was not documented in Core 2014.  Preserving the
+    intention of that method to use neighboring counts to break ties, this
+    method uses 3 basepair overlapping windows, where the preceding and
+    succeeding basepair counts act as a "bonus" value to help break ties.
+
+    @param indices_peak Output integer vector to store peak locations.
+    @param groups Sequential number indicating signal count group membership.
+    @param indices_signal Absolute locations of signal counts.
+    @param starts_signal Relative locations of signal counts relative to region.
+    @param scores_signal Values of signal counts.
+    @param len Number of members in signal group.
+    @param prefer_last Boolean whether to effectively scan from the last count.
+ */
 void
 tss(int* indices_peak, int* groups, int* indices_signal, int* starts_signal,
     int* scores_signal, int len, int* prefer_last)

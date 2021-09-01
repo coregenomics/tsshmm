@@ -1,10 +1,17 @@
+/** @file
+
+    @brief Wrap C functions to accept R S-expression object arguments.
+ */
+
 #include "R_wrap_tsshmm.h"
 #include "models.h"
 #include "tss.h"
 #include "viterbi.h"
 
-/* Wrap C functions to accept R S-expression object arguments. */
+/** Frees the memory of a TSS hidden Markov model.
 
+    @param external_pointer Pointer to the TSS hidden Markov model C object.
+ */
 void
 C_model_destroy(SEXP external_pointer)
 {
@@ -13,6 +20,11 @@ C_model_destroy(SEXP external_pointer)
   ghmm_dmodel_free(&model);
 }
 
+/** Allocates a TSS hidden Markov model for training and Viterbi decoding.
+
+    @param external_pointer Pointer to the TSS hidden Markov model C object.
+    @return The nil object
+*/
 SEXP
 C_model_tsshmm(SEXP external_pointer)
 {
@@ -25,6 +37,16 @@ C_model_tsshmm(SEXP external_pointer)
   return R_NilValue;
 }
 
+/** Find peaks using 3 basepair tie-breaking.
+
+    @param indices_peak Output integer vector to store peak locations.
+    @param groups Sequential number indicating signal count group membership.
+    @param indices_signal Absolute locations of signal counts.
+    @param starts_signal Relative locations of signal counts relative to region.
+    @param scores_signal Values of signal counts.
+    @param prefer_last Boolean whether to effectively scan from the last count.
+    @return The nil object
+ */
 SEXP
 C_tss(SEXP indices_peak, SEXP groups, SEXP indices_signal, SEXP starts_signal,
       SEXP scores_signal, SEXP prefer_last)
@@ -39,7 +61,13 @@ C_tss(SEXP indices_peak, SEXP groups, SEXP indices_signal, SEXP starts_signal,
   return R_NilValue;
 }
 
+/** Return the most probably Viterbi path.
 
+    @param hidden_states Output of most probably hidden state path.
+    @param observations Encoded integer observations.
+    @param lengths Segmentation of observations to allow parallel calculation.
+    @return The nil object
+ */
 SEXP
 C_viterbi(SEXP hidden_states, SEXP observations, SEXP lengths)
 {

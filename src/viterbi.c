@@ -1,41 +1,57 @@
+/** @file
+
+    @brief Decode hidden states using TSS HMM model.
+
+    TSS hidden Markov model from Core et al 2014 doi:10.1038/ng.3142
+
+    The model is intentionally hard coded to allow multiple calls to the
+    Viterbi algorithm without a model function parameter, which would anyway be
+    a nasty singleton a.k.a. global object.
+
+    We can get away with hard coding the model because of the sparse transition
+    states; it makes no sense to train the model because that would create
+    non-sensical transitions between the peaked and non-peaked states, etc.
+
+    The model was previously implemented using RcppHMM at
+    https://gitlab.com/coregenomics/evolength/-/blob/master/R/models.R and is
+    rewritten in C here to more tightly integrate several of the slower
+    computation tasks.
+
+    Also yes, the C algorithm below has been tested against several HMMs; you
+    can see the unit tests at https://gitlab.com/omsai/stdhmm/
+ */
+
 #include <R_ext/Arith.h>
 #include <R_ext/RS.h>
 
 #include "viterbi.h"
 
-/* TSS hidden Markov model from Core et al 2014 doi:10.1038/ng.3142
-
-   The model is intentionally hard coded to allow multiple calls to the Viterbi
-   algorithm without a model function parameter, which would anyway be a nasty
-   singleton a.k.a. global object.
-
-   We can get away with hard coding the model because of the sparse transition
-   states; it makes no sense to train the model because that would create
-   non-sensical transitions between the peaked and non-peaked states, etc.
-
-   The model was previously implemented using RcppHMM at
-   https://gitlab.com/coregenomics/evolength/-/blob/master/R/models.R and is
-   rewritten in C here to more tightly integrate several of the slower
-   computation tasks.
-
-   Also yes, the C algorithm below has been tested against several HMMs; you
-   can see the unit tests at https://gitlab.com/omsai/viterbi/
- */
-
+/** Discrete observation states of signal compared to background counts. */
 typedef enum { NO_SIGNAL, ENRICHED, DEPLETED, N_OBS } OBS;
+/** Hidden states of background, non-peaked, and peaked promoters. */
 typedef enum { B, N1, N2, N3, P1, P2, P3, N_STATES } STATES;
 
 /* Viterbi algorithm. */
 
+/** Node inside a Viterbi trellis which points back to the previous node.  */
 typedef struct trellis_node_st {
+  /** Index of previous hidden state this node transitioned from. */
   int prev;
+  /** Total probability of the Viterbi path to this node. */
   double log_prob;
 } trellis_node_t;
 
+/** Viterbi trellis with rows of nodes corresponding to each hidden state. */
 struct trellis_st {
+  /** 2-dimensional array of hidden state nodes. */
   trellis_node_t** nodes;
 };
 
+/** Allocates a TSS HMM trellis for finding the Viterbi path.
+
+    @param trellis Output pointer to the trellis for allocation.
+    @param len Number of observations.
+*/
 void
 trellis_init(trellis_t** trellis, int len)
 {
@@ -45,6 +61,11 @@ trellis_init(trellis_t** trellis, int len)
     (*trellis)->nodes[i] = Calloc(N_STATES, trellis_node_t);
 }
 
+/** Frees the memory of a TSS HMM Viterbi trellis. 
+
+    @param trellis Pointer to the trellis to be freed.
+    @param len Number of observations.
+*/
 void
 trellis_destroy(trellis_t** trellis, int len)
 {
@@ -54,6 +75,12 @@ trellis_destroy(trellis_t** trellis, int len)
   Free((*trellis));
 }
 
+/** Calculate all Viterbi paths. 
+
+    @param trellis Pointer to an allocated trellis to fill.
+    @param obs Encoded integer observations.
+    @param len Number of observations.
+*/
 void
 viterbi_fill_trellis(trellis_t* trellis, int* obs, int len)
 {
@@ -186,6 +213,12 @@ viterbi_fill_trellis(trellis_t* trellis, int* obs, int len)
   }
 }
 
+/** Return the most probably Viterbi path. 
+
+    @param ret Optimal Viterbi path of hidden states from a filled trellis.
+    @param trellis Pointer to a filled trellis.
+    @param len Number of observations.
+*/
 void
 viterbi_choose_path(int* ret, trellis_t* trellis, int len)
 {

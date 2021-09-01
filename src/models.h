@@ -1,6 +1,6 @@
 /** @file
 
-    @brief Primary API header.
+    @brief Generate pre-designed hidden Markov models.
  */
 
 #ifndef MODELS_H

@@ -15,6 +15,9 @@ test:
     - autoreconf --verbose --install --force
     - Rscript -e 'system.time(devtools::install(dependencies = TRUE, quiet = TRUE))'
     - Rscript -e 'devtools::check(vignettes = FALSE, error_on = "error")'
+    # Warn if any C code is undocumented.
+    - pushd src/
+    - doxygen
   cache:
     paths:
       - library/
