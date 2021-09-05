@@ -1,6 +1,5 @@
 #' @importFrom iterators nextElem idiv
 #' @importFrom methods callNextMethod
-#' @importFrom peakRAM peakRAM
 NULL
 
 #' Transcription start site (TSS) hidden Markov model (HMM).
@@ -83,9 +82,6 @@ setMethod(
         i <- 0
         iterator <- idiv(length(regions), chunkSize = rows)
 
-        ## Measure memory and time used for generating this batch of training
-        ## data.  Then start measuring memory used that will be used at C-level
-        ## for running Baum-Welch.
         while (TRUE) {
             i <- i + 1
             tryCatch(chunk <- nextElem(iterator),
@@ -96,37 +92,33 @@ setMethod(
                              stop(e)
                          }
                      })
+            ## Begin measure time used for generating this batch of training data.
             t_start <- Sys.time()
-            profile <- peakRAM(
-                gr <- regions[(completed+1):(completed+chunk)],
-                completed <- completed + chunk,
-                flog.debug(
-                    sprintf("%4d: Tiling and encoding %d regions for training", i, length(gr))),
-                windows <- mapply(tile_with_rev,
-                                  x = as(gr, "GRangesList"),
-                                  rev = as.vector(strand(gr) == "-"),
-                                  MoreArgs = list(width = 10)),
-                obs <- encode(signal, bg, unlist(List(windows))),
-                flog.debug(sprintf("%4d: Running Baum-Welch", i)),
-                converged <- NA,
-                .Call(C_train, PACKAGE = "tsshmm", converged,
-                      model@external_pointer, unlist(obs, use.names = FALSE),
-                      lengths(obs)))
-
-            ## Measure memory and time used for training the model on this
-            ## batch of data.
-            flog.debug(sprintf("%4d: Converged? %d", i, converged))
-            flog.debug(sprintf("%4d: Time (secs), memory (MB), peak memory (MB) used for this batch", i))
-            for (j in seq(nrow(profile))) {
-                flog.debug(sprintf("%7.3f  %4.1f   %6.1f  %s",
-                                   profile[j, 2],
-                                   profile[j, 3],
-                                   profile[j, 4],
-                                   profile[j, 1]))
-            }
+            gr <- regions[(completed+1):(completed+chunk)]
+            completed <- completed + chunk
+            flog.debug(
+                sprintf("%4d: Tiling and encoding %d regions for training", i, length(gr)))
+            windows <- mapply(tile_with_rev,
+                              x = as(gr, "GRangesList"),
+                              rev = as.vector(strand(gr) == "-"),
+                              MoreArgs = list(width = 10))
+            ## This encode() line uses a massive 70x peak memory than final
+            ## result according to peakRAM::peakRAM() and could stand to be
+            ## optimized.  It's not clear how much of the large memory use is
+            ## from running the unlist(List(...))
+            obs <- encode(signal, bg, unlist(List(windows)))
+            flog.debug(sprintf("%4d: Running Baum-Welch", i))
+            converged <- NA
+            .Call(C_train, PACKAGE = "tsshmm", converged,
+                  model@external_pointer, unlist(obs, use.names = FALSE),
+                  lengths(obs))
+            ## End measure time used for training the model on this batch of data.
             t_end <- Sys.time()
             t_diff <- difftime(t_end, t_start, units = "secs")
             t_elapsed <- t_elapsed + t_diff
+
+            ## Model change.
+            flog.debug(sprintf("%4d: Converged? %d", i, converged))
 
             ## Adjust the batch size towards, say 80% of free memory, also
             ## reporting the ratio of R training data and C-level Baum-Welch.
