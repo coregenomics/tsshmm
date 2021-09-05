@@ -156,7 +156,8 @@ AS_IF(test x$found_ghmm_system != xyes &&
             AC_MSG_NOTICE(Falling back to using bundled GHMM))
       AM_CONDITIONAL(BUNDLED_GHMM, true)
       [AX_SUBDIRS_CONFIGURE([src/ghmm-0.9-rc3],
-                            [[--enable-gsl=no],
+                            [[CFLAGS=$CFLAGS],
+			     [--enable-gsl=no],
                              [--disable-gsltest],
                              [--with-rng=mt],
                              [--with-python=no],
@@ -178,6 +179,17 @@ AS_IF(test x$found_ghmm_system != xyes &&
       # below is idempotent due to the regex address match prefix, so rerunning
       # the patch when rerunning ./configure has no adverse effect.
       sed -i "/RM='@<:@^f@:>@*'/s/'$/ -f'/" src/ghmm-0.9-rc3/configure
+      # Patch bug in upstream's xmlwriter.c when compiling with
+      # -Werror=format-security:
+      #
+      #     xmlwriter.c: In function 'writeDiscreteStateContents':
+      #     xmlwriter.c:356:3: error: format not a string literal and no format arguments [-Werror=format-security]
+      #        rc = xmlTextWriterWriteFormatElement(writer, "backgroundKey", f->model.d[moNo]->bp->name[bgId]);
+      #        ^~The command
+      #
+      # This command is also idempotent, therefore rerunning ./configure has no
+      # adverse effect.
+      [sed -i '356s/y", f/y", "%s", f/' src/ghmm-0.9-rc3/ghmm/xmlwriter.c]
 ) # AS_IF
 
 AS_ECHO
