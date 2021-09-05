@@ -98,7 +98,7 @@ setMethod(
                      })
             t_start <- Sys.time()
             profile <- peakRAM(
-                gr <- regions[completed+1:completed+chunk],
+                gr <- regions[(completed+1):(completed+chunk)],
                 completed <- completed + chunk,
                 flog.debug(
                     sprintf("%4d: Tiling and encoding %d regions for training", i, length(gr))),
