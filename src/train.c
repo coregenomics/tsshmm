@@ -23,10 +23,12 @@ sequence_alloc(ghmm_dseq **seq, int* obs, int* lengths, int n)
     (*seq)->seq_number = n;
     (*seq)->seq_len = lengths;
     (*seq)->seq = Calloc(n, int*);
+    (*seq)->seq_w = Calloc(n, double);
     int cumsum = 0;
     for (int i = 0; i < n; ++i) {
       (*seq)->seq[i] = obs + cumsum;
       cumsum += lengths[i];
+      (*seq)->seq_w[i] = 1.0;
     }
 }
 
@@ -39,6 +41,7 @@ sequence_alloc(ghmm_dseq **seq, int* obs, int* lengths, int n)
 void
 sequence_free(ghmm_dseq **seq)
 {
+  Free((*seq)->seq_w);
   Free((*seq)->seq);
   Free(*seq);
 }
