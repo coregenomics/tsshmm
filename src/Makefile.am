@@ -10,7 +10,8 @@ lib_LTLIBRARIES    = tsshmm.la
 tsshmm_la_CFLAGS   = $(PKG_CFLAGS)
 tsshmm_la_CPPFLAGS = $(PKG_CPPFLAGS)
 tsshmm_la_LDFLAGS  = -module $(PKG_LIBS)
-tsshmm_la_SOURCES  = R_init_tsshmm.c R_wrap_tsshmm.c models.c tss.c viterbi.c
+tsshmm_la_SOURCES  = R_init_tsshmm.c R_wrap_tsshmm.c models.c train.c tss.c \
+viterbi.c
 
 # Hook that runs after the default "all" rule.
 if BUNDLED_GHMM

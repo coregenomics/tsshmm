@@ -3,15 +3,47 @@
 \docType{class}
 \name{TSSHMM-class}
 \alias{TSSHMM-class}
+\alias{train}
 \title{Transcription start site (TSS) hidden Markov model (HMM).}
+\usage{
+model <- new("TSSHMM")
+
+train(model, signal, bg)
+}
+\arguments{
+\item{signal}{Stranded, single base \code{GRanges} with integer score.}
+
+\item{bg}{Stranded, single base \code{GRanges} with integer score.}
+}
 \value{
-A default model object to be trained and then used for decoding.
+new("TSSHMM") returns a default model object to be trained and then
+used for decoding.
+
+train() returns the model with trained transition and emission
+probabilities.
 }
 \description{
-Implementation of the TSS HMM model using the General Hidden Markov Model
-(GHMM) library.  Initialize a pre-designed hidden Markov model.  Due to the
-complexity of the C-interface of the model, the model is managed in the
-C-layer and the R layer merely manages the external reference pointer and
-provides the print function; there are no setters to arbitrarily modify the
-model besides running the training and decoding functions.
+The TSS HMM model is implemented using the General Hidden Markov Model
+(GHMM) C library.  Initialize generates a pre-designed hidden Markov model;
+due to the complexity of the C-interface of the model, the model is managed
+at the C-layer and the R layer has no control over setting up the model: R
+merely manages the external reference pointer and provides the train,
+decoding and print functions; there are no setters to arbitrarily modify the
+model besides running the train function.
+
+To train the model, the sparse reads of the signal and background need to be
+exploded into dense encoded windows categorized as either enriched, depleted
+or no-read observations, and processed by the Baum-Welch EM algorithm to
+update the model transition and emission probabilities.  The larger memory
+required for the 2 steps of generating the dense training data batch and for
+the large matrix to run the Baum-Welch algorithm are empirically determined
+and adjusted to use 80\% of the free system memory by adjusting the batch
+size; similarly the time estimate to complete training is also calculated
+after processing each batch.
 }
+\section{Slots}{
+
+\describe{
+\item{\code{external_pointer}}{Memory address of C GHMM model.}
+}}
+
