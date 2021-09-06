@@ -297,8 +297,15 @@ setAs(
     }
 )
 
+#' Allow TSSHMM to be converted to character vector for logging.
+#'
+#' @param x TSSHMM model to convert to character vector for logging.
+#' @return Character vector of column concatenated transition and emission
+#'     matrices.
+#'
 #' @aliases as.character,TSSHMM-method
 #' @exportMethod as.character
+#' @docType methods
 setMethod(
     "as.character",
     "TSSHMM",
