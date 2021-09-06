@@ -133,14 +133,19 @@ setMethod(
 
         while (TRUE) {
             i <- i + 1
+            completed <- FALSE
             tryCatch(chunk <- nextElem(iterator),
                      error = function(e) {
-                         if (e == "StopIteration") {
-                             break
+                         if (e$message == "StopIteration") {
+                             completed <<- TRUE
                          } else { ## Unhandled error.
                              stop(e)
                          }
                      })
+            if (completed) {
+                flog.debug("Training complete!")
+                break
+            }
             ## Begin measure time used for generating this batch of training data.
             t_start <- Sys.time()
             gr <- regions[(completed+1):(completed+chunk)]
