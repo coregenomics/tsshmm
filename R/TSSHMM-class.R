@@ -267,13 +267,14 @@ sprint_precision_or_na_spaces <- function(x, collapse = "  ") {
     str
 }
 
-## Reexport the `setAs` coercion methods below as described in Bioconductor S4
-## Objects lab exercise:
+## Reexport the coerce methods below as described in Bioconductor S4 Objects
+## lab exercise:
 ## https://www.bioconductor.org/help/course-materials/2011/AdvancedRFeb2011Seattle/ImplementingS4Objects-lab.pdf # nolint
-## Here we use ROxygen tags to manage the NAMESPACE file for us instead of hand
-## editing the file as suggested by the above aged exercise.
+## Here we use ROxygen tags to manage the NAMESPACE file for us
+## instead of hand editing the file as suggested by the above aged exercise.
+#' @name coerce
 #' @importFrom methods coerce
-#' @exportMethod coerce
+#' @export
 methods::coerce
 
 #' Allow TSSHMM to be converted to character vector for logging.
