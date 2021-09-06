@@ -6,11 +6,10 @@ before_script:
 test:
   script:
     # Install devscripts for for devtools::check() to inspect configure:
-    # https://cran.r-project.org/doc/manuals/r-release/R-exts.html#FOOT26
+    # https://cran.r-project.org/doc/manuals/r-release/R-exts.html#FOOT26 We.
+    # also need libtool for automake, and doxygen for checking C docstrings.
     - apt -qqq update
-    - apt -qqq install devscripts
-    # We also need libtool.
-    - apt -qqq install libtool
+    - apt -qqq install devscripts libtool doxygen
     # The usual.
     - autoreconf --verbose --install --force
     - Rscript -e 'system.time(devtools::install(dependencies = TRUE, quiet = TRUE))'
