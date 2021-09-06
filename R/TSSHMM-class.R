@@ -1,4 +1,5 @@
 #' @importFrom S4Vectors List
+#' @importFrom futile.logger flog.info
 #' @importFrom iterators nextElem idiv
 #' @importFrom methods callNextMethod
 #' @importFrom stats complete.cases
