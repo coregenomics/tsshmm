@@ -106,7 +106,7 @@ setMethod(
         ## Train using both strands.  Use range() to estimate number of bases
         ## to feed for training.
         range <- range(c(signal, bg))
-        flog.debug(sprintf("Train using %g bases", sum(lengths(range))))
+        flog.info(sprintf("Train using %g bases", sum(lengths(range))))
 
         ## Start monitoring memory and time use.
         NULL
@@ -118,7 +118,7 @@ setMethod(
         set.seed(123)
         regions <- sample(unlist(tile(range, width = width), use.names = FALSE))
         rows <- 1e3
-        flog.debug(sprintf(paste(
+        flog.info(sprintf(paste(
             "Creating %d batches with %d rows each",
             "to then maximize optimal rows / batch size to available memory"),
             ceiling(length(regions) / rows), rows))
@@ -127,9 +127,9 @@ setMethod(
         i <- 0
         iterator <- idiv(length(regions), chunkSize = rows)
 
-        flog.debug(
+        flog.info(
             sprintf("%4d: Model initial transition and emission matrices:", 0))
-        flog.debug(sprintf("%s", as(model, "character")))
+        flog.info(sprintf("%s", as(model, "character")))
 
         while (TRUE) {
             i <- i + 1
@@ -143,14 +143,14 @@ setMethod(
                          }
                      })
             if (completed) {
-                flog.debug("Training complete!")
+                flog.info("Training complete!")
                 break
             }
             ## Begin measure time used for generating this batch of training data.
             t_start <- Sys.time()
             gr <- regions[(completed+1):(completed+chunk)]
             completed <- completed + chunk
-            flog.debug(
+            flog.info(
                 sprintf("%4d: Tiling and encoding %d regions for training", i, length(gr)))
             windows <- mapply(tile_with_rev,
                               x = as(gr, "GRangesList"),
@@ -161,7 +161,7 @@ setMethod(
             ## optimized.  It's not clear how much of the large memory use is
             ## from running the unlist(List(...))
             obs <- encode(signal, bg, unlist(List(windows)))
-            flog.debug(sprintf("%4d: Running Baum-Welch", i))
+            flog.info(sprintf("%4d: Running Baum-Welch", i))
             converged <- NA
             .Call(C_train, PACKAGE = "tsshmm", converged,
                   model@external_pointer, unlist(obs, use.names = FALSE),
@@ -172,10 +172,10 @@ setMethod(
             t_elapsed <- t_elapsed + t_diff
 
             ## Model change.
-            flog.debug(sprintf("%4d: Converged? %d", i, converged))
-            flog.debug(
+            flog.info(sprintf("%4d: Converged? %d", i, converged))
+            flog.info(
                 sprintf("%4d: Model transition and emission matrices:", i))
-            flog.debug(sprintf("%s", as(model, "character")))
+            flog.info(sprintf("%s", as(model, "character")))
 
             ## Adjust the batch size towards, say 80% of free memory, also
             ## reporting the ratio of R training data and C-level Baum-Welch.
@@ -189,17 +189,17 @@ setMethod(
             rate_mins <- completed / elapsed_mins
             remaining <- length(regions) - completed
             eta_mins <- remaining / rate_mins
-            flog.debug(sprintf(paste("%4d: This batch: %.0f secs",
-                                     "Elapsed: %.1f mins",
-                                     "Completed: %d/%d regions",
-                                     "Rate: %.1f regions/min",
-                                     "ETA: %.0f mins",
-                                     sep = ", "),
-                               i, as.numeric(t_diff, units = "secs"),
-                               elapsed_mins,
-                               completed, length(regions),
-                               rate_mins,
-                               eta_mins))
+            flog.info(sprintf(paste("%4d: This batch: %.0f secs",
+                                    "Elapsed: %.1f mins",
+                                    "Completed: %d/%d regions",
+                                    "Rate: %.1f regions/min",
+                                    "ETA: %.0f mins",
+                                    sep = ", "),
+                              i, as.numeric(t_diff, units = "secs"),
+                              elapsed_mins,
+                              completed, length(regions),
+                              rate_mins,
+                              eta_mins))
 
             ## Repeat until completing a single pass of all data.
         }
