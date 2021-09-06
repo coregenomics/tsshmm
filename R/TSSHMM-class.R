@@ -63,8 +63,12 @@ NULL
 #'
 #' @section Coercion:
 #'
-#' `as(model, "character")` compactly pastes transition and emission matrices
-#' in the same line for logging.
+#' `as(model, "character")` or `as.character(model)` compactly pastes
+#' transition and emission matrices in the same line for logging.
+#'
+#' @name TSSHMM-class
+#' @aliases TSSHMM
+#' @exportClass TSSHMM
 setClass("TSSHMM", slots = c(external_pointer = "externalptr"))
 
 setMethod(
@@ -266,22 +270,16 @@ sprint_precision_or_na_spaces <- function(x, collapse = "  ") {
 ## Objects lab exercise:
 ## https://www.bioconductor.org/help/course-materials/2011/AdvancedRFeb2011Seattle/ImplementingS4Objects-lab.pdf # nolint
 ## Here we use ROxygen tags to manage the NAMESPACE file for us instead of hand
-## editing the file as suggested by the above aged exercise.  The `setAs`
-## functions themselves are intentionally not documented so as to not clobber
-## the base R `as` help.  This creates the following check warning:
-##
-## W  checking for missing documentation entries (...s)
-##    Undocumented S4 methods:
-##      generic 'coerce' and siglist 'TSSHMM,character'
-##    All user level objects in a package (including S4 classes and methods)
-##    should have documentation entries.
-##
-## Bioconductor core packages document `as` alongside the class descriptions or
-## constructors, so these coercion functions should be upstreamed.
+## editing the file as suggested by the above aged exercise.
 #' @importFrom methods coerce
 #' @exportMethod coerce
 methods::coerce
-## Allow TSSHMM to be converted to character vector for logging.
+
+#' Allow TSSHMM to be converted to character vector for logging.
+#'
+#' @name coerce
+#' @aliases coerce,TSSHMM,character-method
+#' @docType methods
 setAs(
     "TSSHMM", "character",
     function(from) {
@@ -296,3 +294,10 @@ setAs(
         to
     }
 )
+
+#' @aliases as.character,TSSHMM-method
+#' @exportMethod as.character
+setMethod(
+    "as.character",
+    "TSSHMM",
+    function(x) as(x, "character"))

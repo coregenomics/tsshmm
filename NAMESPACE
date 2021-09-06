@@ -2,6 +2,8 @@
 
 export(hmm)
 export(tss)
+exportClasses(TSSHMM)
+exportMethods(as.character)
 exportMethods(coerce)
 import(GenomicRanges)
 importFrom(BiocGenerics,relist)

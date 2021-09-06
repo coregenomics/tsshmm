@@ -3,6 +3,7 @@
 \docType{class}
 \name{TSSHMM-class}
 \alias{TSSHMM-class}
+\alias{TSSHMM}
 \title{Transcription start site (TSS) hidden Markov model (HMM).}
 \description{
 Initialize, train, and decode nascent RNAreads using a pre-designed hidden
@@ -70,7 +71,7 @@ enhancer regions along with the decoded hidden states for each window.
 \section{Coercion}{
 
 
-\code{as(model, "character")} compactly pastes transition and emission matrices
-in the same line for logging.
+\code{as(model, "character")} or \code{as.character(model)} compactly pastes
+transition and emission matrices in the same line for logging.
 }
 
