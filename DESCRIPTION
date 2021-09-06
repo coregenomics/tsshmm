@@ -40,6 +40,7 @@ Imports:
     Rdpack,
     S4Vectors,
     futile.logger,
+    iterators,
     methods,
     stats
 Suggests:

@@ -3,47 +3,74 @@
 \docType{class}
 \name{TSSHMM-class}
 \alias{TSSHMM-class}
-\alias{train}
 \title{Transcription start site (TSS) hidden Markov model (HMM).}
-\usage{
-model <- new("TSSHMM")
-
-train(model, signal, bg)
-}
-\arguments{
-\item{signal}{Stranded, single base \code{GRanges} with integer score.}
-
-\item{bg}{Stranded, single base \code{GRanges} with integer score.}
-}
-\value{
-new("TSSHMM") returns a default model object to be trained and then
-used for decoding.
-
-train() returns the model with trained transition and emission
-probabilities.
-}
 \description{
+Initialize, train, and decode nascent RNAreads using a pre-designed hidden
+Markov model.
+}
+\details{
 The TSS HMM model is implemented using the General Hidden Markov Model
-(GHMM) C library.  Initialize generates a pre-designed hidden Markov model;
-due to the complexity of the C-interface of the model, the model is managed
-at the C-layer and the R layer has no control over setting up the model: R
-merely manages the external reference pointer and provides the train,
-decoding and print functions; there are no setters to arbitrarily modify the
-model besides running the train function.
+(GHMM) C library.  Due to the complexity of the GHMM's C-interface, the R
+layer provides no setters to modify the model aside from running the train
+function.
 
 To train the model, the sparse reads of the signal and background need to be
 exploded into dense encoded windows categorized as either enriched, depleted
-or no-read observations, and processed by the Baum-Welch EM algorithm to
-update the model transition and emission probabilities.  The larger memory
-required for the 2 steps of generating the dense training data batch and for
-the large matrix to run the Baum-Welch algorithm are empirically determined
-and adjusted to use 80\% of the free system memory by adjusting the batch
-size; similarly the time estimate to complete training is also calculated
-after processing each batch.
-}
-\section{Slots}{
+or no-read observations, which are then processed by the Baum-Welch EM
+algorithm to update the model transition and emission probabilities.
 
-\describe{
-\item{\code{external_pointer}}{Memory address of C GHMM model.}
-}}
+The training data are randomized and divided into batches large enough to
+provide sufficient samples for the calculating the background state
+transitions, but small enough to work within numerical precision limits and
+to make the training process more observable.  On each batch, the input
+training data is transformed into dense training observations and then the
+Baum-Welch algorithm is run.  After each batch, the model state is shown
+alongside a time estimate to complete training if the logging level has not
+been reduced from the INFO level.
+}
+\section{Constructor}{
+
+
+model <- new("TSSHMM")
+
+\code{new("TSSHMM")} returns a default model object to be trained and then
+used for decoding.
+}
+
+\section{Accessor}{
+
+
+\code{parameters(model)} returns 2 matrices: the transition state probability
+matrix, and the discrete observable emission probability matrix.
+}
+
+\section{Displaying}{
+
+
+\code{show(model)} summarizes \code{parameters(model)} and the parameter dimesions,
+namely, the number of transition states and number of discrete observable
+emissions.
+}
+
+\section{Model Training}{
+
+
+\code{train(model, signal, background)} returns the model with trained transition
+and emission probabilities.  The arguments, \code{signal} and \code{bg}, are stranded,
+single base \code{GRanges} with integer scores.
+}
+
+\section{Model Evaluation}{
+
+
+\code{decode(model, signal, background)} returns \code{GRanges} of active promoter or
+enhancer regions along with the decoded hidden states for each window.
+}
+
+\section{Coercion}{
+
+
+\code{as(model, "character")} compactly pastes transition and emission matrices
+in the same line for logging.
+}
 
