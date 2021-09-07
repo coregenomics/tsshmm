@@ -8,9 +8,10 @@ dnl This script will optionally use ghmm-config if present.  We cannot strictly
 dnl rely on ghmm-config because a major operating system, Debian, neglects to
 dnl include gmm-config tool with it's libghmm-dev package for some reason.
 
+dnl Be careful not to introduce any trailing newlines in this tsshmm_VERSION m4
+dnl macro.
 m4_define(tsshmm_VERSION,
-dnl Be careful not to introduce any trailing newlines in tsshmm_VERSION!
-m4_esyscmd([awk '/^Version/ {printf "%s", $NF; exit 0}' DESCRIPTION]))
+          m4_esyscmd([awk '/^Version/ {printf "%s", $NF; exit 0}' DESCRIPTION]))
 AC_INIT(tsshmm, m4_defn([tsshmm_VERSION]))
 AC_CONFIG_AUX_DIR([tools])
 AC_CONFIG_MACRO_DIR([tools])
