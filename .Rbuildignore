@@ -4,6 +4,6 @@
 ^doc$
 ^library$
 ^src/\.dir-locals\.el$
-^src/ghmm-0.9-rc3/ghmm/\.dir-locals\.el$
+^src/ghmm-0.9-rc3/\.dir-locals\.el$
 ^tools/.*\.RData$
 ^tools/ci_r_setup\.yaml$
