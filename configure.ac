@@ -9,7 +9,7 @@ dnl rely on ghmm-config because a major operating system, Debian, neglects to
 dnl include gmm-config tool with it's libghmm-dev package for some reason.
 
 m4_define(tsshmm_VERSION,
-dnl Be careful not to introduce any trailing newlines.
+dnl Be careful not to introduce any trailing newlines in tsshmm_VERSION!
 m4_esyscmd([awk '/^Version/ {printf "%s", $NF; exit 0}' DESCRIPTION]))
 AC_INIT(tsshmm, m4_defn([tsshmm_VERSION]))
 AC_CONFIG_AUX_DIR([tools])
