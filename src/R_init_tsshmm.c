@@ -33,9 +33,9 @@ attribute_visible
 R_init_tsshmm(DllInfo *info)
 {
   R_registerRoutines(info, NULL, call_methods, NULL, NULL);
-  /* These two settings prevent .C calls from R to use character string to
-     access to speed up searches of routines and require explicit namespace
-     access from other R packages. */
+  /* These next two settings forbid .C calls in R from using character strings,
+     which speeds up searches of routines.  The symbols additionally require
+     explicit namespace access from other R packages. */
   R_useDynamicSymbols(info, FALSE);
   R_forceSymbols(info, TRUE);
 }
