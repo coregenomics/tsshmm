@@ -193,6 +193,10 @@ AS_IF(test x$found_ghmm_system != xyes &&
       [sed -i '356s/y", f/y", "%s", f/' src/ghmm-0.9-rc3/ghmm/xmlwriter.c]
 ) # AS_IF
 
+# Variables for Doxygen.
+AC_SUBST(R_INCLUDE, ["${CPPFLAGS#-I}"])
+AC_SUBST(GHMM_INCLUDE, ["${GHMM_CPPFLAGS#-I}"])
+
 AS_ECHO
 AS_BOX(Configuration of $PACKAGE_STRING)
 AS_ECHO
@@ -214,6 +218,10 @@ AS_ECHO("          CPATH = $CPATH")
 AS_ECHO(" C_INCLUDE_PATH = $C_INCLUDE_PATH")
 AS_ECHO("LD_LIBRARY_PATH = $LD_LIBRARY_PATH")
 AS_ECHO
+AS_ECHO("      R_INCLUDE = $R_INCLUDE")
+AS_ECHO("   GHMM_INCLUDE = $GHMM_INCLUDE")
+AS_ECHO
 
 AC_CONFIG_FILES([src/Makefile])
+AC_CONFIG_FILES([src/Doxyfile])
 AC_OUTPUT

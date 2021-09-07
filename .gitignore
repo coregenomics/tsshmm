@@ -9,6 +9,7 @@ autom4te.cache/
 config.log
 config.status
 configure
+src/Doxyfile
 src/Makefile
 
 # aclocal
