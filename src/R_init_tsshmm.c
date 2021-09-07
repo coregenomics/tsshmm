@@ -23,7 +23,11 @@ static const R_CallMethodDef call_methods[] =
    { NULL, NULL, 0 }            /* Terminating NULL entry. */
   };
 
-/** Register C routines for R and disable slow character vector .C calls. */
+/** Register C routines for R and disable slow character vector .C calls.
+
+    @param info Handle to this dynamic library so that this library's
+    entry points can be registered.
+*/
 void
 attribute_visible
 R_init_tsshmm(DllInfo *info)
