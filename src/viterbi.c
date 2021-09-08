@@ -11,6 +11,15 @@
 
 #include "viterbi.h"
 
+/** Return the most probable Viterbi path.
+
+    @param hidden_states Optimal Viterbi path of hidden states for each
+    observation.
+    @param model Pointer to the trained HMM.
+    @param obs Encoded integer observations.
+    @param lengths Segmentation of observations to allow parallel calculation.
+    @param n Number of observations.
+ */
 void
 viterbi(int* hidden_states, ghmm_dmodel* model, int* obs, int* lengths, int n)
 {
