@@ -164,7 +164,11 @@ setMethod(
             ## This encode() line uses a massive 70x peak memory than final
             ## result according to peakRAM::peakRAM() and could stand to be
             ## optimized.  It's not clear how much of the large memory use is
-            ## from running the unlist(List(...))
+            ## from running the unlist(List(...)).  In any case, an optimal way
+            ## to address this would be to change the preceding function
+            ## tile_with_rev() to natively generate GRanges using vectorized
+            ## rev input to eliminate wrapping the function with mapply() which
+            ## produces the undesirable list output.
             obs <- encode(signal, bg, unlist(List(windows)))
             flog.info(sprintf("%4d: Running Baum-Welch", i))
             converged <- NA
