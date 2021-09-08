@@ -171,6 +171,7 @@ AS_IF(test x$found_ghmm_system != xyes &&
       [AC_SUBST(GHMM_CPPFLAGS, ["-I$GHMM_ROOT/.."])]
       # Using -rpath=. prefers the bundled over any system installation.
       [AC_SUBST(GHMM_LDFLAGS, ["-Wl,-rpath=. -L$GHMM_ROOT/.libs"])]
+      AC_MSG_NOTICE(Applying patches to GHMM to fix errors and warnings from "R CMD check")
       # Patch bug in upstream's configure bug:
       #
       #     config.status: executing libtool commands
@@ -179,7 +180,10 @@ AS_IF(test x$found_ghmm_system != xyes &&
       # ... it's not yet clear how to fix upstream's configure.ac.  The command
       # below is idempotent due to the regex address match prefix, so rerunning
       # the patch when rerunning ./configure has no adverse effect.
+      [cp -au src/ghmm-0.9-rc3/configure{,.bak}]
       sed -i "/RM='@<:@^f@:>@*'/s/'$/ -f'/" src/ghmm-0.9-rc3/configure
+      [touch -r src/ghmm-0.9-rc3/configure{.bak,}]
+      [diff -u src/ghmm-0.9-rc3/configure{.bak,}]
       # Patch bug in upstream's xmlwriter.c when compiling with
       # -Werror=format-security:
       #
@@ -190,7 +194,30 @@ AS_IF(test x$found_ghmm_system != xyes &&
       #
       # This command is also idempotent, therefore rerunning ./configure has no
       # adverse effect.
+      [cp -au src/ghmm-0.9-rc3/ghmm/xmlwriter.c{,.bak}]
       [sed -i '356s/y", f/y", "%s", f/' src/ghmm-0.9-rc3/ghmm/xmlwriter.c]
+      [touch -r src/ghmm-0.9-rc3/ghmm/xmlwriter.c{.bak,}]
+      [diff -u src/ghmm-0.9-rc3/ghmm/xmlwriter.c{.bak,}]
+      # Patch bug in upstreams mcmc.c test when compiling with -Wint-conversion:
+      #
+      #     mcmc.c:146:15: warning: implicit declaration of function ‘ghmm_dmodel_cfbgibbs’; did you mean ‘ghmm_dmodel_logp’? [-Wimplicit-function-declaration]
+      #        int * Q =   ghmm_dmodel_cfbgibbs(mo, my_output,
+      #                    ^~~~~~~~~~~~~~~~~~~~
+      #                    ghmm_dmodel_logp
+      #     mcmc.c:146:15: warning: initialization of ‘int *’ from ‘int’ makes pointer from integer without a cast [-Wint-conversion]
+      #     mcmc.c:148:108: warning: passing argument 4 of ‘ghmm_dmodel_viterbi_logp’ makes pointer from integer without a cast [-Wint-conversion]
+      #        printf("viterbi prob mcmc%f \n", ghmm_dmodel_viterbi_logp(mo, my_output->seq[0], my_output->seq_len[0], Q[0]));
+      #
+      # This command is also idempotent, therefore rerunning ./configure has no
+      # adverse effect.
+      [cp -au src/ghmm-0.9-rc3/tests/mcmc.c{,.bak}]
+      sed -i 's/int @<:@*@:>@ Q/int **Q/' src/ghmm-0.9-rc3/tests/mcmc.c
+      grep -q 'ghmm@<:@/@:>@cfbgibbs@<:@.@:>@h' src/ghmm-0.9-rc3/tests/mcmc.c || sed -i '9i\
+#include <ghmm/cfbgibbs.h>\
+#include <ghmm/fbgibbs.h>' src/ghmm-0.9-rc3/tests/mcmc.c
+      [touch -r src/ghmm-0.9-rc3/tests/mcmc.c{.bak,}]
+      [diff -u src/ghmm-0.9-rc3/tests/mcmc.c{.bak,}]
+      AC_MSG_NOTICE(Finished patching GHMM)
 ) # AS_IF
 
 # Variables for Doxygen.
