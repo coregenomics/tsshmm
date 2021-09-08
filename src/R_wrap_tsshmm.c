@@ -5,7 +5,7 @@
 
 #include "R_wrap_tsshmm.h"
 #include "models.h"
-#include "model_read.h"
+#include "parameters.h"
 #include "train.h"
 #include "tss.h"
 #include "viterbi.h"
@@ -67,6 +67,20 @@ SEXP
 C_model_matrices(SEXP trans, SEXP emis, SEXP model)
 {
   model_matrices(REAL(trans), REAL(emis), R_ExternalPtrAddr(model));
+  return R_NilValue;
+}
+
+/** Write model transition and emission matrices.
+
+    @param trans Input transition flat matrix.
+    @param emis Input emission flat matrix.
+    @param model Pointer to initialized HMM to update.
+    @return The nil object
+ */
+SEXP
+C_model_set_matrices(SEXP trans, SEXP emis, SEXP model)
+{
+  model_set_matrices(REAL(trans), REAL(emis), R_ExternalPtrAddr(model));
   return R_NilValue;
 }
 

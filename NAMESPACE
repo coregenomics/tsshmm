@@ -3,6 +3,7 @@
 export(coerce)
 export(tss)
 exportClasses(TSSHMM)
+exportMethods("parameters<-")
 exportMethods(as.character)
 exportMethods(parameters)
 exportMethods(train)

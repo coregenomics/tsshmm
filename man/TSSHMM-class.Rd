@@ -6,6 +6,8 @@
 \alias{TSSHMM}
 \alias{parameters}
 \alias{parameters,TSSHMM-method}
+\alias{parameters<-}
+\alias{parameters<-,TSSHMM-method}
 \alias{show,TSSHMM-method}
 \alias{train}
 \alias{train,TSSHMM,GRanges,GRanges-method}
@@ -16,6 +18,10 @@
 parameters(model)
 
 \S4method{parameters}{TSSHMM}(model)
+
+parameters(model) <- value
+
+\S4method{parameters}{TSSHMM}(model) <- value
 
 \S4method{show}{TSSHMM}(object)
 
@@ -29,6 +35,10 @@ viterbi(model, signal, bg)
 }
 \arguments{
 \item{model}{S4 object of a pre-designed hidden Markov model.}
+
+\item{value}{named list containing 2 model matrices: the transition state
+probability matrix named "trans", and the discrete observable emission
+probability matrix named "emis".}
 
 \item{object}{S4 object to display.}
 
@@ -91,11 +101,15 @@ wrapper provides no setters to modify the number of states or the number
 of observations of the model.
 }
 
-\section{Accessor}{
+\section{Accessors}{
 
 
-\code{parameters(model)} returns 2 matrices: the transition state probability
-matrix, and the discrete observable emission probability matrix.
+\code{parameters(model)}, \code{parameters(model) <- list(trans = ..., emis = ...)}
+gets or sets 2 matrices: the transition state probability matrix, and the
+discrete observable emission probability matrix.
+
+After training a model, you may wish to save the parameters to later reload
+to eliminiate retraining the model in the future.
 }
 
 \section{Displaying}{
@@ -103,7 +117,7 @@ matrix, and the discrete observable emission probability matrix.
 
 \code{show(model)} summarizes \code{parameters(model)} and the parameter dimesions,
 namely, the number of transition states and number of discrete observable
-emiassions.
+emissions.
 }
 
 \section{Model Training}{
@@ -112,6 +126,9 @@ emiassions.
 \code{train(model, signal, background)} returns the model with trained transition
 and emission probabilities.  The arguments, \code{signal} and \code{bg}, are stranded,
 single base \code{GRanges} with integer scores.
+
+After training, you may wish to save the parameters so that they can be
+reloaded in a later session as explained in the examples.
 
 To train the model, the sparse reads of the signal and background need to be
 exploded into dense encoded windows categorized as either enriched, depleted
@@ -146,19 +163,29 @@ transition and emission matrices in the same line for logging.
 }
 
 \examples{
+# Model evaluation.
 signal <- GRanges(paste0("chr1:", c(100, 110, 200, 300), ":+"))
 score(signal) <- rep(5L, 4)
 signal
-bg <- GRanges()
-bg
-model <- new("TSSHMM")
-model
-promoters_peaked <- viterbi(model, signal, bg)
-promoters_peaked
+(bg <- GRanges())
+(model <- new("TSSHMM"))
+(promoters_peaked <- viterbi(model, signal, bg))
 # There is only 1 promoter in thise region because the first two signal
 # values filling 2x 20 bp windows are captured by the HMM as a promoter.
 # The remaining 2 signal peaks with no surrounding signal are ignored.
 stopifnot(length(promoters) == 1)
+
+# Model training with saving and reloading parameters.
+#train(model, signal, bg)
+(params <- parameters(model))
+\dontrun{
+save(params, file = "model_trained_on_foo_dataset.RData")
+# ... in a later R session.
+load(file = "model_trained_on_foo_dataset.RData")
+}
+(model <- new("TSSHMM"))
+parameters(model) <- params
+model
 }
 \references{
 \insertRef{core_analysis_2014}{tsshmm}

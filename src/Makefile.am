@@ -10,7 +10,7 @@ lib_LTLIBRARIES    = tsshmm.la
 tsshmm_la_CFLAGS   = $(PKG_CFLAGS)
 tsshmm_la_CPPFLAGS = $(PKG_CPPFLAGS)
 tsshmm_la_LDFLAGS  = -module $(PKG_LIBS)
-tsshmm_la_SOURCES  = R_init_tsshmm.c R_wrap_tsshmm.c model_read.c models.c \
+tsshmm_la_SOURCES  = R_init_tsshmm.c R_wrap_tsshmm.c models.c parameters.c \
 train.c tss.c viterbi.c
 
 # Hook that runs after the default "all" rule.

@@ -17,6 +17,7 @@ static const R_CallMethodDef call_methods[] =
    CALLDEF(C_model_tsshmm, 1),
    CALLDEF(C_model_sizes, 3),
    CALLDEF(C_model_matrices, 3),
+   CALLDEF(C_model_set_matrices, 3),
    CALLDEF(C_train, 4),
    CALLDEF(C_viterbi, 4),
    CALLDEF(C_tss, 6),

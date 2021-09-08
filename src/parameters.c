@@ -1,6 +1,8 @@
+#include <assert.h>
+
 #include <R_ext/Arith.h>
 
-#include "model_read.h"
+#include "parameters.h"
 
 /** Read model sizes to allocate storage for R matrices.
 
@@ -36,4 +38,26 @@ model_matrices(double* trans, double* emis, ghmm_dmodel* model)
     for (int j = 0; j < model->M; ++j)
       emis[i * model->M + j] = model->s[i].b[j];
   }
+}
+
+/** Write model transition and emission matrices.
+
+    @param trans Input transition flat matrix.
+    @param emis Input emission flat matrix.
+    @param model Pointer to initialized HMM.
+ */
+void
+model_set_matrices(double* trans, double* emis, ghmm_dmodel* model)
+{
+  for (int i = 0; i < model->N; ++i) {
+    for (int j = 0; j < model->N; ++j)
+      if (ghmm_dmodel_check_transition(model, i, j))
+    	ghmm_dmodel_set_transition(model, i, j, trans[i * model->N + j]);
+
+    for (int j = 0; j < model->M; ++j)
+      model->s[i].b[j] = emis[i * model->M + j];
+  }
+
+  /* Validate the model. */
+  assert(ghmm_dmodel_check(model) == 0);
 }
