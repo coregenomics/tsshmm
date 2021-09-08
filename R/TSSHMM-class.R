@@ -109,7 +109,7 @@ setMethod(
 #'
 #' `show(model)` summarizes `parameters(model)` and the parameter dimesions,
 #' namely, the number of transition states and number of discrete observable
-#' emiassions.
+#' emissions.
 #'
 #' @param object S4 object to display.
 setMethod(
