@@ -4,16 +4,114 @@
 \name{TSSHMM-class}
 \alias{TSSHMM-class}
 \alias{TSSHMM}
+\alias{parameters}
+\alias{parameters,TSSHMM-method}
+\alias{show,TSSHMM-method}
+\alias{train}
+\alias{train,TSSHMM,GRanges,GRanges-method}
+\alias{viterbi}
+\alias{viterbi,TSSHMM,GRanges,GRanges-method}
 \title{Transcription start site (TSS) hidden Markov model (HMM).}
+\usage{
+parameters(model)
+
+\S4method{parameters}{TSSHMM}(model)
+
+\S4method{show}{TSSHMM}(object)
+
+train(model, signal, bg)
+
+\S4method{train}{TSSHMM,GRanges,GRanges}(model, signal, bg)
+
+viterbi(model, signal, bg)
+
+\S4method{viterbi}{TSSHMM,GRanges,GRanges}(model, signal, bg)
+}
+\arguments{
+\item{model}{S4 object of a pre-designed hidden Markov model.}
+
+\item{object}{S4 object to display.}
+
+\item{signal}{Stranded, single base \code{GRanges} with integer score.}
+
+\item{bg}{Stranded, single base \code{GRanges} with integer score.}
+}
 \description{
-Initialize, train, and decode nascent RNAreads using a pre-designed hidden
-Markov model.
+Initialize, train, and decode nascent RNA reads to find transcription start
+sites using Andre Martin's 2014 hidden Markov model.
 }
 \details{
+The model takes inputs of raw nascent RNA counts, aggregates 10 basepair
+tiles by maximum value, and categorizes them into 3 types of observations:
+\enumerate{
+\item no signal (TAP+ == 0)
+\item enriched  (TAP+ >  TAP-)
+\item depleted  (TAP- >= TAP+ > 0)
+}
+...and searches for 3 groups of hidden states:
+\enumerate{
+\item background,
+\item peaked TSS regions, and
+\item non-peaked TSS regions
+}
+
+Both the peaked and non-peaked TSS regions each require 3 states to describe
+them:
+\itemize{
+\item Non-peaked regions flanked by single low intensity transitions and a
+moderately long intensity center.
+\item Peaked regions flanked by one-or-more low intensity transitions and a
+short intense center.
+}
+Therefore, in total the HMM has 7 states:
+\describe{
+\item{B}{Background}
+\item{N1}{Non-peaked TSS transition state}
+\item{N2}{Non-peaked TSS repeating state}
+\item{N3}{Non-peaked TSS transition state}
+\item{P1}{Peaked TSS moderate signal}
+\item{P2}{Peaked TSS high signal}
+\item{P3}{Peaked TSS moderate signal}
+}
+
+Finally, after the hidden states are obtained from Viterbi decoding, the
+hidden states are converted back into stranded GRanges.
+}
+\section{Constructor}{
+
+
+model <- new("TSSHMM")
+
+\code{new("TSSHMM")} returns a default model object to be trained and then
+used for decoding.
+
 The TSS HMM model is implemented using the General Hidden Markov Model
 (GHMM) C library.  Due to the complexity of the GHMM's C-interface, the R
-layer provides no setters to modify the model aside from running the train
-function.
+wrapper provides no setters to modify the number of states or the number
+of observations of the model.
+}
+
+\section{Accessor}{
+
+
+\code{parameters(model)} returns 2 matrices: the transition state probability
+matrix, and the discrete observable emission probability matrix.
+}
+
+\section{Displaying}{
+
+
+\code{show(model)} summarizes \code{parameters(model)} and the parameter dimesions,
+namely, the number of transition states and number of discrete observable
+emiassions.
+}
+
+\section{Model Training}{
+
+
+\code{train(model, signal, background)} returns the model with trained transition
+and emission probabilities.  The arguments, \code{signal} and \code{bg}, are stranded,
+single base \code{GRanges} with integer scores.
 
 To train the model, the sparse reads of the signal and background need to be
 exploded into dense encoded windows categorized as either enriched, depleted
@@ -29,43 +127,15 @@ Baum-Welch algorithm is run.  After each batch, the model state is shown
 alongside a time estimate to complete training if the logging level has not
 been reduced from the INFO level.
 }
-\section{Constructor}{
-
-
-model <- new("TSSHMM")
-
-\code{new("TSSHMM")} returns a default model object to be trained and then
-used for decoding.
-}
-
-\section{Accessor}{
-
-
-\code{parameters(model)} returns 2 matrices: the transition state probability
-matrix, and the discrete observable emission probability matrix.
-}
-
-\section{Displaying}{
-
-
-\code{show(model)} summarizes \code{parameters(model)} and the parameter dimesions,
-namely, the number of transition states and number of discrete observable
-emissions.
-}
-
-\section{Model Training}{
-
-
-\code{train(model, signal, background)} returns the model with trained transition
-and emission probabilities.  The arguments, \code{signal} and \code{bg}, are stranded,
-single base \code{GRanges} with integer scores.
-}
 
 \section{Model Evaluation}{
 
 
-\code{decode(model, signal, background)} returns \code{GRanges} of active promoter or
+\code{viterbi(model, signal, background)} returns \code{GRanges} of active promoter or
 enhancer regions along with the decoded hidden states for each window.
+
+Running \code{flog.threshold(DEBUG)} before running \code{viterbi} logs additional
+information of what the function is doing.
 }
 
 \section{Coercion}{
@@ -75,3 +145,24 @@ enhancer regions along with the decoded hidden states for each window.
 transition and emission matrices in the same line for logging.
 }
 
+\examples{
+signal <- GRanges(paste0("chr1:", c(100, 110, 200, 300), ":+"))
+score(signal) <- rep(5L, 4)
+signal
+bg <- GRanges()
+bg
+model <- new("TSSHMM")
+model
+promoters_peaked <- viterbi(model, signal, bg)
+promoters_peaked
+# There is only 1 promoter in thise region because the first two signal
+# values filling 2x 20 bp windows are captured by the HMM as a promoter.
+# The remaining 2 signal peaks with no surrounding signal are ignored.
+stopifnot(length(promoters) == 1)
+}
+\references{
+\insertRef{core_analysis_2014}{tsshmm}
+}
+\seealso{
+\url{https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4254663/}
+}

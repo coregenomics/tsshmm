@@ -9,29 +9,46 @@ NULL
 #'
 #' @description
 #'
-#' Initialize, train, and decode nascent RNAreads using a pre-designed hidden
-#' Markov model.
+#' Initialize, train, and decode nascent RNA reads to find transcription start
+#' sites using Andre Martin's 2014 hidden Markov model.
 #'
 #' @details
 #'
-#' The TSS HMM model is implemented using the General Hidden Markov Model
-#' (GHMM) C library.  Due to the complexity of the GHMM's C-interface, the R
-#' layer provides no setters to modify the model aside from running the train
-#' function.
+#' The model takes inputs of raw nascent RNA counts, aggregates 10 basepair
+#' tiles by maximum value, and categorizes them into 3 types of observations:
+#' \enumerate{
+#' \item no signal (TAP+ == 0)
+#' \item enriched  (TAP+ >  TAP-)
+#' \item depleted  (TAP- >= TAP+ > 0)
+#' }
+#' ...and searches for 3 groups of hidden states:
+#' \enumerate{
+#' \item background,
+#' \item peaked TSS regions, and
+#' \item non-peaked TSS regions
+#' }
 #'
-#' To train the model, the sparse reads of the signal and background need to be
-#' exploded into dense encoded windows categorized as either enriched, depleted
-#' or no-read observations, which are then processed by the Baum-Welch EM
-#' algorithm to update the model transition and emission probabilities.
+#' Both the peaked and non-peaked TSS regions each require 3 states to describe
+#' them:
+#' \itemize{
+#' \item Non-peaked regions flanked by single low intensity transitions and a
+#' moderately long intensity center.
+#' \item Peaked regions flanked by one-or-more low intensity transitions and a
+#' short intense center.
+#' }
+#' Therefore, in total the HMM has 7 states:
+#' \describe{
+#' \item{B}{Background}
+#' \item{N1}{Non-peaked TSS transition state}
+#' \item{N2}{Non-peaked TSS repeating state}
+#' \item{N3}{Non-peaked TSS transition state}
+#' \item{P1}{Peaked TSS moderate signal}
+#' \item{P2}{Peaked TSS high signal}
+#' \item{P3}{Peaked TSS moderate signal}
+#' }
 #'
-#' The training data are randomized and divided into batches large enough to
-#' provide sufficient samples for the calculating the background state
-#' transitions, but small enough to work within numerical precision limits and
-#' to make the training process more observable.  On each batch, the input
-#' training data is transformed into dense training observations and then the
-#' Baum-Welch algorithm is run.  After each batch, the model state is shown
-#' alongside a time estimate to complete training if the logging level has not
-#' been reduced from the INFO level.
+#' Finally, after the hidden states are obtained from Viterbi decoding, the
+#' hidden states are converted back into stranded GRanges.
 #'
 #' @section Constructor:
 #'
@@ -40,38 +57,15 @@ NULL
 #' `new("TSSHMM")` returns a default model object to be trained and then
 #' used for decoding.
 #'
-#' @section Accessor:
-#'
-#' `parameters(model)` returns 2 matrices: the transition state probability
-#' matrix, and the discrete observable emission probability matrix.
-#'
-#' @section Displaying:
-#'
-#' `show(model)` summarizes `parameters(model)` and the parameter dimesions,
-#' namely, the number of transition states and number of discrete observable
-#' emissions.
-#'
-#' @section Model Training:
-#'
-#' `train(model, signal, background)` returns the model with trained transition
-#' and emission probabilities.  The arguments, `signal` and `bg`, are stranded,
-#' single base `GRanges` with integer scores.
-#'
-#' @section Model Evaluation:
-#'
-#' `decode(model, signal, background)` returns `GRanges` of active promoter or
-#' enhancer regions along with the decoded hidden states for each window.
-#'
-#' @section Coercion:
-#'
-#' `as(model, "character")` or `as.character(model)` compactly pastes
-#' transition and emission matrices in the same line for logging.
+#' The TSS HMM model is implemented using the General Hidden Markov Model
+#' (GHMM) C library.  Due to the complexity of the GHMM's C-interface, the R
+#' wrapper provides no setters to modify the number of states or the number
+#' of observations of the model.
 #'
 #' @name TSSHMM-class
 #' @aliases TSSHMM
 #' @exportClass TSSHMM
 setClass("TSSHMM", slots = c(external_pointer = "externalptr"))
-
 setMethod(
     "initialize",
     signature = "TSSHMM",
@@ -85,7 +79,14 @@ setMethod(
     }
 )
 
+#' @rdname TSSHMM-class
 setGeneric("parameters", function(model) standardGeneric("parameters"))
+#' @rdname TSSHMM-class
+#' @section Accessor:
+#'
+#' `parameters(model)` returns 2 matrices: the transition state probability
+#' matrix, and the discrete observable emission probability matrix.
+#' @exportMethod parameters
 setMethod(
     "parameters",
     signature = "TSSHMM",
@@ -103,11 +104,64 @@ setMethod(
     }
 )
 
+#' @rdname TSSHMM-class
+#' @section Displaying:
+#'
+#' `show(model)` summarizes `parameters(model)` and the parameter dimesions,
+#' namely, the number of transition states and number of discrete observable
+#' emiassions.
+#'
+#' @param object S4 object to display.
+setMethod(
+    "show",
+    signature = "TSSHMM",
+    definition = function(object) {
+        params <- parameters(object)
+        dim <- dim(params$emis)
+        cat(paste(as.character(class(object)), "object with",
+                  dim[1], "hidden states and",
+                  dim[2], "emissions:\n"))
+        cat("Transition matrix:\n")
+        print(params$trans)
+        cat("Emission matrix:\n")
+        print(params$emis)
+        invisible() # Documented return for show().
+    }
+)
+
+#' @rdname TSSHMM-class
+#' @param model S4 object of a pre-designed hidden Markov model.
+#' @param signal Stranded, single base \code{GRanges} with integer score.
+#' @param bg Stranded, single base \code{GRanges} with integer score.
 setGeneric("train", function(model, signal, bg) standardGeneric("train"))
+#' @rdname TSSHMM-class
+#' @section Model Training:
+#'
+#' `train(model, signal, background)` returns the model with trained transition
+#' and emission probabilities.  The arguments, `signal` and `bg`, are stranded,
+#' single base `GRanges` with integer scores.
+#'
+#' To train the model, the sparse reads of the signal and background need to be
+#' exploded into dense encoded windows categorized as either enriched, depleted
+#' or no-read observations, which are then processed by the Baum-Welch EM
+#' algorithm to update the model transition and emission probabilities.
+#'
+#' The training data are randomized and divided into batches large enough to
+#' provide sufficient samples for the calculating the background state
+#' transitions, but small enough to work within numerical precision limits and
+#' to make the training process more observable.  On each batch, the input
+#' training data is transformed into dense training observations and then the
+#' Baum-Welch algorithm is run.  After each batch, the model state is shown
+#' alongside a time estimate to complete training if the logging level has not
+#' been reduced from the INFO level.
+#'
+#' @exportMethod train
 setMethod(
     "train",
     signature = c("TSSHMM", "GRanges", "GRanges"),
     definition = function(model, signal, bg) {
+        check_valid_hmm_reads(signal)
+        check_valid_hmm_reads(bg)
         ## Train using both strands.  Use range() to estimate number of bases
         ## to feed for training.
         range <- range(c(signal, bg))
@@ -124,8 +178,7 @@ setMethod(
         regions <- sample(unlist(tile(range, width = width), use.names = FALSE))
         rows <- 1e3
         flog.info(sprintf(paste(
-            "Creating %d batches with %d rows each",
-            "to then maximize optimal rows / batch size to available memory"),
+            "Creating %d batches with up to %d rows each"),
             ceiling(length(regions) / rows), rows))
         completed <- 0
         t_elapsed <- 0
@@ -215,22 +268,57 @@ setMethod(
     }
 )
 
+#' @rdname TSSHMM-class
+setGeneric("viterbi", function(model, signal, bg) standardGeneric("viterbi"))
+#' @rdname TSSHMM-class
+#' @section Model Evaluation:
+#'
+#' `viterbi(model, signal, background)` returns `GRanges` of active promoter or
+#' enhancer regions along with the decoded hidden states for each window.
+#'
+#' Running `flog.threshold(DEBUG)` before running `viterbi` logs additional
+#' information of what the function is doing.
+#' @exportMethod viterbi
 setMethod(
-    "show",
-    signature = "TSSHMM",
-    definition = function(object) {
-        params <- parameters(object)
-        dim <- dim(params$emis)
-        cat(paste(as.character(class(object)), "object with",
-                  dim[1], "hidden states and",
-                  dim[2], "emissions:\n"))
-        cat("Transition matrix:\n")
-        print(params$trans)
-        cat("Emission matrix:\n")
-        print(params$emis)
-        invisible() # Documented return for show().
+    "viterbi",
+    signature = c("TSSHMM", "GRanges", "GRanges"),
+    definition = function(model, signal, bg) {
+        check_valid_hmm_reads(signal)
+        check_valid_hmm_reads(bg)
+        ranges <- range(c(signal, bg))
+        unlist(
+            mendoapply(
+                viterbi_by_strand, signal = stranded(signal), bg = stranded(bg),
+                MoreArgs = list(model = model, ranges = ranges)),
+            use.names = FALSE)
     }
 )
+
+#' @name TSSHMM-class
+#' @rdname TSSHMM-class
+#' @section Coercion:
+#'
+#' `as(model, "character")` or `as.character(model)` compactly pastes
+#' transition and emission matrices in the same line for logging.
+#'
+#' @importFrom Rdpack reprompt
+#' @references \insertRef{core_analysis_2014}{tsshmm}
+#' @seealso \url{https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4254663/}
+#' @examples
+#' signal <- GRanges(paste0("chr1:", c(100, 110, 200, 300), ":+"))
+#' score(signal) <- rep(5L, 4)
+#' signal
+#' bg <- GRanges()
+#' bg
+#' model <- new("TSSHMM")
+#' model
+#' promoters_peaked <- viterbi(model, signal, bg)
+#' promoters_peaked
+#' # There is only 1 promoter in thise region because the first two signal
+#' # values filling 2x 20 bp windows are captured by the HMM as a promoter.
+#' # The remaining 2 signal peaks with no surrounding signal are ignored.
+#' stopifnot(length(promoters) == 1)
+NULL
 
 ## https://stackoverflow.com/a/5173906
 precision_single <- function(x) {

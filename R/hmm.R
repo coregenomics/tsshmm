@@ -48,81 +48,6 @@ check_valid_hmm_reads <- function(gr) {
 
 stranded <- function(x) split(x, strand(x))[-3] # -3 removes "*" strand.
 
-#' Convert signal and background GRO-cap counts into promoter regions.
-#'
-#' \code{hmm} implements Andre Martin's HMM model to find transcription start
-#' sites from GRO-cap sequencing.
-#'
-#' The model takes inputs of raw GRO-cap counts, aggregates 10 basepair tiles
-#' by maximum value, and categorizes them into 3 types of observations:
-#' \enumerate{
-#' \item no signal (TAP+ == 0)
-#' \item enriched  (TAP+ >  TAP-)
-#' \item depleted  (TAP- >= TAP+ > 0)
-#' }
-#' ...and searches for 3 groups of hidden states:
-#' \enumerate{
-#' \item background,
-#' \item peaked TSS regions, and
-#' \item non-peaked TSS regions
-#' }
-#'
-#' Both the peaked and non-peaked TSS regions each require 3 states to describe
-#' them:
-#' \itemize{
-#' \item Non-peaked regions flanked by single low intensity transitions and a
-#' moderately long intensity center.
-#' \item Peaked regions flanked by one-or-more low intensity transitions and a
-#' short intense center.
-#' }
-#' Therefore, in total the HMM has 7 states:
-#' \describe{
-#' \item{B}{Background}
-#' \item{N1}{Non-peaked TSS transition state}
-#' \item{N2}{Non-peaked TSS repeating state}
-#' \item{N3}{Non-peaked TSS transition state}
-#' \item{P1}{Peaked TSS moderate signal}
-#' \item{P2}{Peaked TSS high signal}
-#' \item{P3}{Peaked TSS moderate signal}
-#' }
-#'
-#' Finally, after the hidden states are obtained from Viterbi decoding, the
-#' hidden states are converted back into stranded GRanges.
-#'
-#' @param signal Stranded, single base \code{GRanges} with integer score.
-#' @param bg Stranded, single base \code{GRanges} with integer score.
-#' @param ranges \code{GRanges} to limit signal search.
-#' @return Strand-specific \code{GRanges} of peaked and non-peaked promoter
-#'     regions.
-#' @importFrom Rdpack reprompt
-#' @references
-#' \insertRef{core_analysis_2014}{tsshmm}
-#' @examples
-#' signal <- GRanges(paste0("chr1:", c(100, 110, 200, 300), ":+"))
-#' score(signal) <- rep(5L, 4)
-#' signal
-#' promoters_peaked <- hmm(signal, GRanges(), range(signal))
-#' promoters_peaked
-#' # There is only 1 promoter in thise region because the first two signal
-#' # values filling 2x 20 bp windows are captured by the HMM as a promoter.
-#' # The remaining 2 signal peaks with no surrounding signal are ignored.
-#' stopifnot(length(promoters) == 1)
-#'
-#' bg_nonpeaked <- signal
-#' promoters_nonpeaked <- hmm(signal, bg_nonpeaked, range(signal))
-#' promoters_nonpeaked
-#' @export
-hmm <- function(signal, bg, ranges) {
-    check_valid_hmm_reads(signal)
-    check_valid_hmm_reads(bg)
-    stopifnot(is(ranges, "GRanges"))
-    unlist(
-        mendoapply(
-            hmm_by_strand, stranded(signal), stranded(bg),
-            MoreArgs = list(ranges = ranges)),
-        use.names = FALSE)
-}
-
 ## Rely on annotations for now.  Based on the data below, more careful work is
 ## required to adjust the methodology to be annotation free.  This is because
 ## choosing thresholds for how far apart GRO-cap counts can be to consider them
@@ -148,8 +73,8 @@ hmm <- function(signal, bg, ranges) {
 ##   0      0      0      0      0      0      1      1      1      2
 ## 55%    60%    65%    70%    75%    80%    85%    90%    95%   100%
 ##   3      4      6      9     15     25     47    122    641 191170
-hmm_by_strand <- function(signal, bg, ranges) {
-    flog.debug("Entered hmm_by_strand()")
+viterbi_by_strand <- function(model, signal, bg, ranges) {
+    flog.debug("Entered viterbi_by_strand()")
     flog.debug("Checking inputs")
     strand <- runValue(strand(signal))
     if (length(strand) == 0L)
@@ -175,7 +100,7 @@ hmm_by_strand <- function(signal, bg, ranges) {
     flog.debug("Encoding observations as enriched, depleted, or background")
     observations <- encode(signal, bg, windows)
     flog.debug("Running Viterbi")
-    states <- viterbi(observations)
+    states <- viterbi_low_level(model, observations)
     flog.debug("Reducing discovered regions")
     is_promoter <- states > 0
 
@@ -190,7 +115,7 @@ hmm_by_strand <- function(signal, bg, ranges) {
         gr$states[unlist(is_promoter)][unlist(gr_reduced$revmap)],
         gr_reduced$revmap)
     gr_reduced$revmap <- NULL
-    flog.debug("Exiting hmm_by_strand()")
+    flog.debug("Exiting viterbi_by_strand()")
     gr_reduced
 }
 
@@ -263,7 +188,8 @@ replace_unstranded <- function (gr) {
 #' overlapping windows, where the preceding and succeeding basepair counts act
 #' as a "bonus" value to help break ties.
 #'
-#' @inheritParams hmm
+#' @param signal Stranded, single base \code{GRanges} with integer score.
+#' @param ranges \code{GRanges} to limit signal search.
 #' @param pairs Whether to embed the \code{GRanges} into a \code{Pairs} object
 #'     with the stranded range in which the TSS was found.
 #' @return Stranded, single base \code{GRanges} with integer score.  If

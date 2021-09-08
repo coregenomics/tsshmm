@@ -1,16 +1,15 @@
 /** @file
 
-    @brief Decode hidden states using TSS HMM model.
+    @brief Decode hidden states from observations using trained hidden
+    Markov model.
  */
 
 #ifndef VITERBI_H
 #define VITERBI_H
 
-/** Viterbi trellis type. */
-typedef struct trellis_st trellis_t;
-void trellis_init(trellis_t** trellis, int len);
-void trellis_destroy(trellis_t** trellis, int len);
-void viterbi_fill_trellis(trellis_t* trellis, int* obs, int len);
-void viterbi_choose_path(int* ret, trellis_t* trellis, int len);
+#include <ghmm/model.h>
+
+void viterbi(int* hidden_states, ghmm_dmodel* model, int* obs, int* lengths,
+	     int n);
 
 #endif  /* VITERBI_H */

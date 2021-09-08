@@ -46,40 +46,50 @@ test_that("tile_with_rev is equivalent to endoapply(tile(...), rev)", {
 
 context("hmm")
 
-test_that("hmm_by_strand joins signal regions", {
-    promoters <- hmm_by_strand(signal, bg, ranges)
+test_that("viterbi_by_strand joins signal regions", {
+    model <- new("TSSHMM")
+    promoters <- viterbi_by_strand(model, signal, bg, ranges)
     promoters_no_metadata <- promoters
     mcols(promoters_no_metadata) <- NULL
     expect_equal(promoters_no_metadata,
-                 GRanges(c("chr1:101-300:+",
-                           "chr2:201-260:+",
-                           "chr2:281-450:+")))
+                 GRanges(c("chr1:111-300:+",
+                           "chr2:231-260:+",
+                           "chr2:281-410:+",
+                           "chr2:431-450:+")))
     gr_mask <- unlist(bases)[as.logical(mask)]
     n_ol <- sum(countOverlaps(gr_mask, promoters))
     expect_gt(n_ol / sum(mask), 0.8)
 })
 
-test_that("hmm_by_strand notifies about missing regions", {
-    expect_silent(hmm_by_strand(signal, bg, ranges))
-    expect_message(hmm_by_strand(signal, bg, c(ranges, empty)),
+test_that("viterbi_by_strand notifies about missing regions", {
+    model <- new("TSSHMM")
+    expect_silent(viterbi_by_strand(model, signal, bg, ranges))
+    expect_message(viterbi_by_strand(model, signal, bg, c(ranges, empty)),
                    "Dropping 33[.]3%")
 })
 
-test_that("hmm runs on both strands", {
-    promoters <- hmm(signal, bg, ranges)
+test_that("viterbi runs on both strands", {
+    model <- new("TSSHMM")
+    promoters <- viterbi(model, signal, bg)
     promoters_no_metadata <- promoters
     mcols(promoters_no_metadata) <- NULL
     expect_equal(promoters_no_metadata,
-                 GRanges(c("chr1:101-300:+",
-                           "chr2:201-260:+",
-                           "chr2:281-450:+")))
+                 GRanges(c("chr1:111-300:+",
+                           "chr2:231-260:+",
+                           "chr2:280-407:+",
+                           "chr2:428-447:+")))
     strand(signal) <- "-"
-    promoters <- hmm(signal, bg, ranges)
+    promoters <- viterbi(model, signal, bg)
     promoters_no_metadata <- promoters
     mcols(promoters_no_metadata) <- NULL
     expect_equal(promoters_no_metadata,
-                 GRanges(c("chr1:101-300:-",
-                           "chr2:201-450:-")))
+                 GRanges(c("chr1:101-139:-",
+                           "chr1:149-187:-",
+                           "chr1:189-216:-",
+                           "chr1:245-283:-",
+                           "chr2:201-260:-",
+                           "chr2:280-338:-",
+                           "chr2:349-437:-")))
 })
 
 context("encode")

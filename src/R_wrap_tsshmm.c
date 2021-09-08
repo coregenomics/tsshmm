@@ -92,6 +92,25 @@ C_train(SEXP converged, SEXP model, SEXP obs, SEXP lengths)
   return R_NilValue;
 }
 
+/** Return the most probably Viterbi path.
+
+    @param hidden_states Output of most probably hidden state path.
+    @param model Pointer to the trained HMM.
+    @param observations Encoded integer observations.
+    @param lengths Segmentation of observations to allow parallel calculation.
+    @return The nil object
+ */
+SEXP
+C_viterbi(SEXP hidden_states, SEXP model, SEXP observations, SEXP lengths)
+{
+  viterbi(INTEGER(hidden_states),
+	  R_ExternalPtrAddr(model),
+	  INTEGER(observations),
+	  INTEGER(lengths),
+	  LENGTH(lengths));
+  return R_NilValue;
+}
+
 /** Find peaks using 3 basepair tie-breaking.
 
     @param indices_peak Output integer vector to store peak locations.
@@ -113,49 +132,5 @@ C_tss(SEXP indices_peak, SEXP groups, SEXP indices_signal, SEXP starts_signal,
       INTEGER(scores_signal),
       LENGTH(scores_signal),
       INTEGER(prefer_last));
-  return R_NilValue;
-}
-
-/** Return the most probably Viterbi path.
-
-    @param hidden_states Output of most probably hidden state path.
-    @param observations Encoded integer observations.
-    @param lengths Segmentation of observations to allow parallel calculation.
-    @return The nil object
- */
-SEXP
-C_viterbi(SEXP hidden_states, SEXP observations, SEXP lengths)
-{
-  /* Reuse the trellis by allocating it once using the longest observation. */
-  int len_max = INTEGER(lengths)[0];
-  int* cumsum = Calloc(LENGTH(lengths), int);
-  cumsum[0] = 0;
-  for (int i = 1; i < LENGTH(lengths); ++i) {
-    cumsum[i] = cumsum[i-1] + INTEGER(lengths)[i-1];
-    if (INTEGER(lengths)[i] > len_max) {
-      len_max = INTEGER(lengths)[i];
-    }
-  }
-#pragma omp parallel
-  {
-    trellis_t* trellis = NULL;
-    trellis_init(&trellis, len_max);
-
-#pragma omp for nowait
-    for (int i = 0; i < LENGTH(lengths); ++i) {
-      int* obs = INTEGER(observations) + cumsum[i];
-      int len = INTEGER(lengths)[i];
-      int* ret = INTEGER(hidden_states) + cumsum[i];
-
-      /* Run Viterbi. */
-      viterbi_fill_trellis(trellis, obs, len);
-      viterbi_choose_path(ret, trellis, len);
-    }
-
-    /* Cleanup. */
-    trellis_destroy(&trellis, len_max);
-  }
-  Free(cumsum);
-
   return R_NilValue;
 }
