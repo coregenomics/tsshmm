@@ -1,6 +1,6 @@
 .Rhistory
-Meta
-doc
+/Meta/
+/doc/
 inst/doc
 *.RData
 
@@ -39,3 +39,6 @@ tools/lt~obsolete.m4
 
 # bundled dependency
 src/ghmm-0.9-rc3/
+
+# doxygen
+src/doc

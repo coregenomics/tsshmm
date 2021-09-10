@@ -83,3 +83,205 @@ and even result in incorrect discontiguous calls.
 \end{smallfigure}
 
 \bibliography{refs}
+
+\appendix
+
+# Minimum distance between promoter regions
+
+Here we calculate how much the model influences
+joining clusters of
+signal (enriched or depleted)
+into promoters (N1--N3, P1--P3).
+There are long stretches with
+background emission states in 5' capped RNA data.
+Some of the background states are informative if they are close to promoters,
+because it is possible for closely located enriched or depleted regions
+with only a small amount of background between them
+to actually be part of the same promoter or enhancer cluster.
+To determine whether background states are uninformative and can be ignored,
+we must first calculate the maximum number of background states upto which
+the model will join nearby enriched or depleted regions into a cluster.
+
+Knowing this minimum distance between promoter regions
+allows a significant computational speed up
+by removing long stretches of uninformative background states
+where there is no 5' capped RNA signal.
+<!-- Explain the rounding errors? -->
+Furthermore, reducing the input data in this way
+reduces the possibility of computational rounding errors
+from otherwise running the model on long chromosomes,
+or using the traditional workaround of rescaling the Viterbi calculations.
+<!--
+Symbols as used by Mark Stamp http://www.cs.sjsu.edu/~stamp/RUA/HMM.pdf and
+Richard A. O'Keefe http://www.cs.otago.ac.nz/cosc348/hmm/hmm.pdf
+-->
+\begin{align}
+  \intertext{Let these symbols define our Markov chain tuple of
+    $(S, \pi, A)$ where:}
+  N &= \text{number of states} \\
+  S &= \{s_1, \ldots, s_N\} = \text{set of states} \\
+  \pi &= \{\pi_1, \ldots, \pi_N\} =
+  \text{initial state distribution, $\sum_{i=1}^N\pi_i = 1$} \\
+  A &= (a_{ij})_{i \in S, j \in S} = \text{state transition probability matrix,
+    $\sum_{i \in S}a_{ij} = 1$} \\
+  \intertext{Let these additional symbols define our HMM tuple of
+    $(S,V,\pi,A,B)$}
+  M &= \text{number of observation states}\\
+  V &= \{v_1, \ldots, v_M\} =
+  \text{set of possible observations, also called vocabulary} \\
+  B &= {(b_{ij})}_{i \in V, j \in S} =
+  \text{observation probabilities matrix, also called emission} \\
+  T &= \text{Number of discrete time points} \\
+  \mathcal{O} &= \{\mathcal{O}_1, \ldots, \mathcal{O}_T\} = \text{observation
+    sequence}
+  \intertext{The difference equations when we step the Markov chain are:}
+  \pi^{(0)} &= \pi \\
+  \pi^{(n+1)} &= A \cdot \pi^{(n)}
+  \intertext{The general solution to the above equations is:}
+  \pi^{(n+1)} &= A^n \cdot \pi
+  \intertext{The corresponding symbol probability solution is:}
+  \psi^{(n+1)} &= B \cdot A^n \cdot \pi
+\end{align}
+The tables for our model transition and emission probabilities
+--- with zero probability values intentionally left blank for readability ---
+are:
+\begin{tabular}{r c c c c c c c}
+  \toprule
+  State & {B}   & {N1}  & {N2}  & {N3}  & {P1}  & {P2}  & {P3}  \\
+  \midrule
+  B     & 0.990 & 0.005 &       &       & 0.005 &       &       \\
+  N1    &       &       & 1.000 &       &       &       &       \\
+  N2    &       &       & 0.500 & 0.500 &       &       &       \\
+  N3    & 1.000 &       &       &       &       &       &       \\
+  P1    &       &       &       &       & 0.500 & 0.500 &       \\
+  P2    &       &       &       &       & 0.450 & 0.100 & 0.450 \\
+  P3    & 0.500 &       &       &       &       &       & 0.500 \\
+  \bottomrule
+\end{tabular}
+
+\begin{tabular}{r c c c}
+  \toprule
+  State & {Background} & {Enriched} & {Depleted} \\
+  \midrule
+  Background     (B)      & 0.90 & 0.05 & 0.05 \\
+  Non-peaked TSS (N1--N3) & 0.09 & 0.90 & 0.01 \\
+  Peaked TSS (P1--P3) & 0.10 & 0.45 & 0.45 \\
+  \bottomrule
+\end{tabular}
+
+\begin{align}
+  \intertext{From the tables above, the matrices for our model are:}
+  A &=
+  \begin{bmatrix}
+    0.990 & 0.005 &       &       & 0.005 &       &       \\
+          &       & 1.000 &       &       &       &       \\
+          &       & 0.500 & 0.500 &       &       &       \\
+    1.000 &       &       &       &       &       &       \\
+          &       &       &       & 0.500 & 0.500 &       \\
+          &       &       &       & 0.450 & 0.100 & 0.450 \\
+    0.500 &       &       &       &       &       & 0.500 \\
+  \end{bmatrix} \\
+  B^\top &=
+  \begin{bmatrix}
+    0.90 & 0.05 & 0.05 \\
+    0.09 & 0.90 & 0.01 \\
+    0.09 & 0.90 & 0.01 \\
+    0.09 & 0.90 & 0.01 \\
+    0.10 & 0.45 & 0.45 \\
+    0.10 & 0.45 & 0.45 \\
+    0.10 & 0.45 & 0.45
+  \end{bmatrix} \\
+  \intertext{Before we can substituting these values in the general solution, we
+    need to do a little more work to calculate the power $n$ of the dense matrix
+    $A^n$.  Calculating the power of large dense matrices is inefficient, but we
+    can trivially calculate the power a diagonal matrix.  Therefore, we need to
+    create the equivalent diagonal matrix $\Lambda$ with the eigenvalues of
+    $A^n$ by factoring out eigenvector matrix $H$ and its inverse eigenvector
+    matrix $H^{-1}$:}
+  A &= H \cdot \Lambda \cdot H^{-1} \\
+  \implies A^n &= {\left( H \cdot \Lambda \cdot H^{-1} \right)}^n \\
+  &= H \cdot {(\Lambda)}^n \cdot H^{-1} \quad \because H \cdot H^{-1} = I
+\end{align}
+
+Solving in R:
+
+```{r Fewer digits, echo = FALSE}
+digits <- getOption("digits")
+options(digits = 3)
+```
+```{r Factorize}
+A <- matrix(c(.990, .005,  0,  0, .005,  0, 0,
+                 0,    0,  1,  0,    0,  0, 0,
+                 0,    0, .5, .5,    0,  0, 0,
+                 1,    0,  0,  0,    0,  0, 0,
+                 0,    0,  0,  0,   .5, .5, 0,
+                 0,    0,  0,  0,  .45, .1, .45,
+                .5,    0,  0,  0,    0,  0, .5), ncol = 7, byrow = T)
+l <- eigen(A)$values
+L <- l * diag(length(l))
+H <- eigen(A)$vectors
+H_inv <- solve(H)
+stopifnot(all(zapsmall(H %*% H_inv) == diag(length(l))))  # Sanity check.
+stopifnot(all(zapsmall(H %*% L %*% H_inv) == A))          # Sanity check.
+L
+H
+H_inv
+```
+```{r Restore digits, echo = FALSE}
+options(digits = digits)
+```
+\begin{align}
+  \intertext{Now that we have all the pieces of $H, \Lambda,$ and $H^{-1}$,
+             we can calculate $A^n$, and therefore we can finally solve:}
+  \psi^{(n+1)} &=
+  B \cdot A^n \cdot \pi \\
+  &= B \cdot \left[ H \cdot \Lambda^n \cdot H^{-1} \right] \cdot \pi
+\end{align}
+To find the minimum distance between independent promoter regions,
+we need to maximize the value of $n$ by choosing each possible initial state
+with $\pi$ to provide an output of mostly background emission states.
+
+Continuing the R code:
+
+```{r Calculate distance between promoter regions, message = FALSE}
+B <- t(matrix(c(c(.9, .05, .05),
+                rep(c(.09, .9, .01), 3),
+                rep(c(.1, .45, .45), 3)), ncol = 3, byrow = T))
+psi <- function(pi, n = 1) c(B %*% t(H %*% L^n %*% H_inv) %*% unlist(pi))
+## Try each state as the starting value.
+pis <- unlist(apply(diag(7), 1, list), recursive = FALSE)
+library(tidyverse)
+grid <- expand_grid(n = seq(1, 100), pi = pis)
+dd <- pmap(grid, psi)
+probs <-
+  grid %>%
+  bind_cols(do.call("rbind", dd) %>%
+            `colnames<-`(c("B", "N", "P")) %>%
+            as_tibble())
+stopifnot(all(zapsmall(rowSums(probs[, -2:-1])) == 1))
+diffs_df <-
+  probs %>%
+  group_by(pi) %>%
+  mutate(across(matches("[BNP]", ignore.case = FALSE),
+                ## Relative change.
+                function(x) (x - lag(x)) / x))
+diffs <-
+  diffs_df %>%
+  group_by(n) %>%
+  summarize(max = max(B, N, P)) %>%
+  pull(max)
+## Check for relative convergence.
+tols <- 10^(-3:-8)
+sapply(tols, function(tol) min(which(diffs < tol)))
+```
+Therefore the model probabilities implicitly require at least
+28 windows or 280 basepairs
+between promoter regions before returning to the stationary distribution
+using a relaxed tolerance of 1E-3, and
+82 windows or 820 basepairs using a stricter tolerance of 1E-8.
+
+# Session info
+
+```{r sessionInfo, echo = FALSE, comment = ""}
+sessionInfo()
+```
