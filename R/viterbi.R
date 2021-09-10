@@ -1,3 +1,5 @@
+#' @importFrom stats na.pass
+
 viterbi_low_level <- function(model, observations) {
     if (is.list(observations) || is(observations, "List")) {
         lengths <- lengths(observations)
