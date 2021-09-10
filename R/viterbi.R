@@ -61,6 +61,6 @@ prom_dist <- function(model, tol = 10^-8, n = 100) {
     ## Lowest index (number of windows) from tolerance.
     idx <- which(diffs < tol)
     if (! length(idx))
-        stop("Tolerence", tol, "is too stringent!  Try increasing n.")
+        stop("Tolerence ", tol, " is too stringent!  Try increasing n.")
     min(idx)
 }
