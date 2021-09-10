@@ -282,6 +282,6 @@ using a relaxed tolerance of 1E-3, and
 
 # Session info
 
-```{r sessionInfo, echo = FALSE, comment = ""}
-sessionInfo()
+```{r sessionInfo, echo = FALSE}
+knitr::raw_latex(toLatex(sessionInfo()))
 ```
