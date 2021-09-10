@@ -16,7 +16,7 @@ viterbi_low_level <- function(model, observations) {
 
 ## The theory and calculation of this minimum distance between promoters is
 ## explained in the vignette appendix.
-prom_dist <- function(model, tol = 10^-8) {
+prom_dist <- function(model, tol = 10^-8, n = 100) {
     params <- parameters(model)
     ## Replace NA values with zeroes for the eigen() function.
     A <- params$trans
@@ -36,7 +36,7 @@ prom_dist <- function(model, tol = 10^-8) {
     psi <- function(pi, n = 1) c(B %*% t(H %*% L^n %*% H_inv) %*% unlist(pi))
     ## Calculate psi for all combinations of initial values up to 100 windows.
     pis <- unlist(apply(diag(length(l)), 1, list), recursive = FALSE)
-    grid <- expand.grid(n = 1:100, pi = pis)
+    grid <- expand.grid(pi = pis, n = 1:n)
     dd <- mapply(psi, grid$pi, grid$n)
     ## Set emission names.
     rownames(dd) <- c("bg", "enriched", "depleted")
@@ -57,7 +57,10 @@ prom_dist <- function(model, tol = 10^-8) {
     }
     ## Locate worst case scenario.
     diffs_df[, "max"] <- apply(diffs_df[, -2:-1], 1, max)
-    diffs <- aggregate(max ~ n, diffs_df, max)$max
+    diffs <- aggregate(max ~ n, diffs_df, max, na.action = na.pass)$max
     ## Lowest index (number of windows) from tolerance.
-    min(which(diffs < tol))
+    idx <- which(diffs < tol)
+    if (! length(idx))
+        stop("Tolerence", tol, "is too stringent!  Try increasing n.")
+    min(idx)
 }

@@ -3,7 +3,6 @@ context("viterbi helpers")
 test_that("prom_dist is valid for several tolerances", {
     model <- new("TSSHMM")
     ## These expected values are calculated in the vignette appendix.
-    skip("prom_dist base R implementation is inconsistent with the vignette!")
     expect_equal(prom_dist(model, tol = 10^-3), 28)
     expect_equal(prom_dist(model, tol = 10^-4), 39)
     expect_equal(prom_dist(model, tol = 10^-5), 50)
