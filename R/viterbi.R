@@ -47,7 +47,8 @@ prom_dist <- function(model, tol = 10^-8) {
     ## Calculate relative differences between probabilities.
     diffs_df <- probs
     diffs_df[, "pi"] <-
-        sapply(pis, function(x) which(unlist(x) == 1)) # Parsable for grouping.
+        sapply(diffs_df$pi,
+               function(x) which(unlist(x) == 1)) # Parsable for grouping.
     relative_diff <- function(x) diff(c(NA, x)) / x
     for (col in colnames(probs)[-2:-1]) {
         formula <- formula(eval(parse(text = paste(col, "~ pi"))))
