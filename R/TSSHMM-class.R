@@ -294,12 +294,27 @@ setMethod(
 )
 
 #' @rdname TSSHMM-class
-setGeneric("viterbi", function(model, signal, bg) standardGeneric("viterbi"))
+setGeneric("viterbi",
+           function(model, signal, bg, ...) standardGeneric("viterbi"))
 #' @rdname TSSHMM-class
+#' @param ... Optional arguments passed on from generics to methods.
+#' @param tol Relative change to HMM steady state used to calculate
+#'     intra-promoter distance.  Preference should be given to
+#'     adjusting the `n` windows parameter before adjusting this.
+#' @param n Maximum number of background windows after a promoter,
+#'     beyond which one is certain that the promoter has ended.  See
+#'     the appendix in the vignette to understand the theory behind
+#'     using `n` and `tol` in this calculation.  `n` is the upper
+#'     limit; the actual number of background windows is calculated
+#'     from the model.
 #' @section Model Evaluation:
 #'
-#' `viterbi(model, signal, background)` returns `GRanges` of active promoter or
-#' enhancer regions along with the decoded hidden states for each window.
+#' `viterbi(model, signal, background, tol = 1e-3, n = 200)` returns
+#' `GRanges` of active promoter or enhancer regions along with the
+#' decoded hidden states for each window.  The `tol` and `n`
+#' parameters are passed on to the intra-promoter distance estimation
+#' function that add flanking windows to ensure that no cluster of proximal
+#' promoters is broken up.
 #'
 #' Running `flog.threshold(DEBUG)` before running `viterbi` logs additional
 #' information of what the function is doing.
@@ -307,10 +322,16 @@ setGeneric("viterbi", function(model, signal, bg) standardGeneric("viterbi"))
 setMethod(
     "viterbi",
     signature = c("TSSHMM", "GRanges", "GRanges"),
-    definition = function(model, signal, bg) {
+    definition = function(model, signal, bg, tol = 1e-3, n = 200) {
         check_valid_hmm_reads(signal)
         check_valid_hmm_reads(bg)
-        ranges <- range(c(signal, bg))
+        ranges <- reduce(
+            c(signal, bg, flank(c(signal, bg),
+                                width = prom_dist(model, tol = tol, n = n),
+                                start = FALSE,
+                                use.names = FALSE)))
+        flog.info(sprintf("Decode %g bases across %d regions",
+                          sum(lengths(ranges)), length(ranges)))
         unlist(
             mendoapply(
                 viterbi_by_strand, signal = stranded(signal), bg = stranded(bg),

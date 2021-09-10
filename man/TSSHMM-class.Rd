@@ -29,9 +29,9 @@ train(model, signal, bg)
 
 \S4method{train}{TSSHMM,GRanges,GRanges}(model, signal, bg)
 
-viterbi(model, signal, bg)
+viterbi(model, signal, bg, ...)
 
-\S4method{viterbi}{TSSHMM,GRanges,GRanges}(model, signal, bg)
+\S4method{viterbi}{TSSHMM,GRanges,GRanges}(model, signal, bg, tol = 0.001, n = 200)
 }
 \arguments{
 \item{model}{S4 object of a pre-designed hidden Markov model.}
@@ -45,6 +45,19 @@ probability matrix named "emis".}
 \item{signal}{Stranded, single base \code{GRanges} with integer score.}
 
 \item{bg}{Stranded, single base \code{GRanges} with integer score.}
+
+\item{...}{Optional arguments passed on from generics to methods.}
+
+\item{tol}{Relative change to HMM steady state used to calculate
+intra-promoter distance.  Preference should be given to
+adjusting the \code{n} windows parameter before adjusting this.}
+
+\item{n}{Maximum number of background windows after a promoter,
+beyond which one is certain that the promoter has ended.  See
+the appendix in the vignette to understand the theory behind
+using \code{n} and \code{tol} in this calculation.  \code{n} is the upper
+limit; the actual number of background windows is calculated
+from the model.}
 }
 \description{
 Initialize, train, and decode nascent RNA reads to find transcription start
@@ -148,8 +161,12 @@ been reduced from the INFO level.
 \section{Model Evaluation}{
 
 
-\code{viterbi(model, signal, background)} returns \code{GRanges} of active promoter or
-enhancer regions along with the decoded hidden states for each window.
+\code{viterbi(model, signal, background, tol = 1e-3, n = 200)} returns
+\code{GRanges} of active promoter or enhancer regions along with the
+decoded hidden states for each window.  The \code{tol} and \code{n}
+parameters are passed on to the intra-promoter distance estimation
+function that add flanking windows to ensure that no cluster of proximal
+promoters is broken up.
 
 Running \code{flog.threshold(DEBUG)} before running \code{viterbi} logs additional
 information of what the function is doing.
