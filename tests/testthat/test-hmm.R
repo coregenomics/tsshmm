@@ -74,22 +74,20 @@ test_that("viterbi runs on both strands", {
     promoters_no_metadata <- promoters
     mcols(promoters_no_metadata) <- NULL
     expect_equal(promoters_no_metadata,
-                 GRanges(c("chr1:111-300:+",
-                           "chr2:231-260:+",
-                           "chr2:280-407:+",
-                           "chr2:428-447:+")))
+                 GRanges(c("chr1:111-298:+",
+                           "chr2:211-406:+",
+                           "chr2:427-455:+")))
     strand(signal) <- "-"
     promoters <- viterbi(model, signal, bg)
     promoters_no_metadata <- promoters
     mcols(promoters_no_metadata) <- NULL
     expect_equal(promoters_no_metadata,
-                 GRanges(c("chr1:101-139:-",
-                           "chr1:149-187:-",
-                           "chr1:189-216:-",
-                           "chr1:245-283:-",
-                           "chr2:201-260:-",
-                           "chr2:280-338:-",
-                           "chr2:349-437:-")))
+                 GRanges(c("chr1:94-173:-",
+                           "chr1:204-283:-",
+                           "chr2:193-261:-",
+                           "chr2:281-300:-",
+                           "chr2:302-339:-",
+                           "chr2:350-437:-")))
 })
 
 context("encode")
