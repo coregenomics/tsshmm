@@ -30,7 +30,7 @@ prom_dist <- function(model, tol = 10^-8, n = 100) {
     ## Validate factorized matrices multiply into the identity matrix.
     stopifnot(all(zapsmall(H %*% H_inv) == diag(length(l))))
     ## Validate multiplying factorized with diagonal matrices recreate A.
-    stopifnot(all(zapsmall(H %*% L %*% H_inv) == A))
+    stopifnot(all(zapsmall(H %*% L %*% H_inv) == zapsmall(A)))
     ## Create our HMM emissions "psi" function.
     B <- t(params$emis)
     psi <- function(pi, n = 1) c(B %*% t(H %*% L^n %*% H_inv) %*% unlist(pi))
