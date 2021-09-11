@@ -327,7 +327,9 @@ setMethod(
         check_valid_hmm_reads(bg)
         ranges <- reduce(
             c(signal, bg, flank(c(signal, bg),
-                                width = prom_dist(model, tol = tol, n = n),
+                                ## Convert prom_dist() windows to basepairs by
+                                ## multiplying by 10.
+                                width = 10 * prom_dist(model, tol = tol, n = n),
                                 start = FALSE,
                                 use.names = FALSE)))
         flog.info(sprintf("Decode %g bases across %d regions",
