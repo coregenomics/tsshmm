@@ -1,3 +1,50 @@
+# tsshmm 0.7.0 (2020-09-17)
+
+## New features
+
+- Support Baum-Welch training.  The trained model can be loaded and saved using
+  the `params()` accessor and setter.
+- Support genome-wide Viterbi inference and remove the limiting regions input.
+
+## Significant user-visible changes
+
+- New models are created by the S4 `TSSHMM-class` for training and inference.
+- `hmm()` has been renamed to `viterbi()`
+- Added `train()` for model training.
+- Added `params()` accessor and setter to load and save the model transition
+  and emission matrices.
+- `tss()` ties are now broken by strand.  In other words, if identical peaks
+  are found on the positive strand, the left-most peak is chosen, but on the
+  negative strand, the right-most peak is chosen.  This was feature was added
+  to alleviate the weaker signal seen when plotting the CA transcription
+  initiation motif of the negative strand compared to stronger signal seen on
+  the positive strand.
+- Documentation in the vignette appendix now describes the derivation and
+  calculation of the minimum distance between neighboring promoter regions.
+  This distance is necessary to flank reads so that Viterbi can be run
+  genome-wide without exhausting RAM with the dense genomic windows.
+- Documentation in the vignette appendix now includes `sessionInfo()`
+
+## Bug fixes and improvements
+
+- Generating large GRanges of reversed windows has been singificantly sped up
+  from 52 minutes down to 2 seconds by hacking the GRanges and IRanges `tile()`
+  core with a drop-in replacement called `tile_with_rev()`.  This is
+  effectively a one-line code change to the core Bioconductor functions which
+  will be upstreamed.
+- All C functions are now documented using doxygen markup, and C documentation
+  consistency is also checked by continuous integration.
+- HMM computation is now handled using the published GHMM library.  This was
+  necessary for complex requirements of Baum-Welch training of the model such
+  as tying emission states.  A system installed GHMM library is automatically
+  preferred; if no system GHMM is detected and no GHMM_ROOT to a prefix
+  installation is supplied, the fallback bundled GHMM dependency is instead
+  patched, compiled and installed.
+- Build system has migrated from `Makevars` to autotools `configure.ac` and
+  `src/Makefile.am` to manage the GHMM dependency, and run recursive `make`
+  when using the bundled GHMM library.
+
+
 # tsshmm 0.6.0 (2020-07-21)
 
 ## New features
