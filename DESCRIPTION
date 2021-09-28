@@ -45,6 +45,9 @@ Imports:
     stats
 Suggests:
     BiocStyle,
+    dplyr,
     knitr,
+    purrr,
     rmarkdown,
-    testthat
+    testthat,
+    tidyr

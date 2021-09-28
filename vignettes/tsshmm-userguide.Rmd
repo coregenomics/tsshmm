@@ -250,7 +250,9 @@ B <- t(matrix(c(c(.9, .05, .05),
 psi <- function(pi, n = 1) c(B %*% t(H %*% L^n %*% H_inv) %*% unlist(pi))
 ## Try each state as the starting value.
 pis <- unlist(apply(diag(7), 1, list), recursive = FALSE)
-library(tidyverse)
+library(dplyr)
+library(tidyr) # expand_grid
+library(purrr) # pmap
 grid <- expand_grid(n = seq(1, 100), pi = pis)
 dd <- pmap(grid, psi)
 probs <-
