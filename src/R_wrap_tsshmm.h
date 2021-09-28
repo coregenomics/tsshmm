@@ -8,7 +8,7 @@
 
 #include <Rdefines.h>
 
-SEXP C_model_tsshmm(SEXP);
+SEXP C_model_tsshmm(SEXP, SEXP);
 SEXP C_model_sizes(SEXP, SEXP, SEXP);
 SEXP C_model_matrices(SEXP, SEXP, SEXP);
 SEXP C_model_set_matrices(SEXP, SEXP, SEXP);

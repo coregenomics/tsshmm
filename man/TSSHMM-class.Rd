@@ -61,7 +61,8 @@ from the model.}
 }
 \description{
 Initialize, train, and decode nascent RNA reads to find transcription start
-sites using Andre Martin's 2014 hidden Markov model.
+sites using Andre Martin's 2014 hidden Markov model for PRO-cap reads and
+Pariksheet Nanda's extension for PRO-seq background reads.
 }
 \details{
 The model takes inputs of raw nascent RNA counts, aggregates 10 basepair
@@ -86,7 +87,8 @@ moderately long intensity center.
 \item Peaked regions flanked by one-or-more low intensity transitions and a
 short intense center.
 }
-Therefore, in total the HMM has 7 states:
+Therefore, in total the HMM has 7 states for PRO-cap and an additional state
+for PRO-seq:
 \describe{
 \item{B}{Background}
 \item{N1}{Non-peaked TSS transition state}
@@ -95,6 +97,7 @@ Therefore, in total the HMM has 7 states:
 \item{P1}{Peaked TSS moderate signal}
 \item{P2}{Peaked TSS high signal}
 \item{P3}{Peaked TSS moderate signal}
+\item{GB}{Gene-body signal in PRO-seq only}
 }
 
 Finally, after the hidden states are obtained from Viterbi decoding, the
@@ -104,9 +107,11 @@ hidden states are converted back into stranded GRanges.
 
 
 model <- new("TSSHMM")
+model <- new("TSSHMM", bg_proseq = TRUE)
 
-\code{new("TSSHMM")} returns a default model object to be trained and then
-used for decoding.
+\code{new("TSSHMM")} returns a default model object to be trained and then used
+for decoding.  An optional argument \code{bg_proseq} uses PRO-seq for background
+instead of PRO-cap; the default is \code{bg_proseq = FALSE}.
 
 The TSS HMM model is implemented using the General Hidden Markov Model
 (GHMM) C library.  Due to the complexity of the GHMM's C-interface, the R

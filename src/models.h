@@ -8,6 +8,6 @@
 
 #include <ghmm/model.h>
 
-void model_tsshmm(ghmm_dmodel** model);
+void model_tsshmm(ghmm_dmodel** model, int proseq);
 
 #endif	/* MODELS_H */

@@ -14,7 +14,7 @@
 /** Table of C routine entry points addresses in the dynamic library. */
 static const R_CallMethodDef call_methods[] =
   {
-   CALLDEF(C_model_tsshmm, 1),
+   CALLDEF(C_model_tsshmm, 2),
    CALLDEF(C_model_sizes, 3),
    CALLDEF(C_model_matrices, 3),
    CALLDEF(C_model_set_matrices, 3),

@@ -25,13 +25,14 @@ C_model_destroy(SEXP external_pointer)
 /** Allocates a TSS hidden Markov model for training and Viterbi decoding.
 
     @param external_pointer Pointer to the TSS hidden Markov model C object.
+    @param proseq Whether to use PRO-seq as background instead of GRO-cap.
     @return The nil object
 */
 SEXP
-C_model_tsshmm(SEXP external_pointer)
+C_model_tsshmm(SEXP external_pointer, SEXP proseq)
 {
   ghmm_dmodel* model = NULL;
-  model_tsshmm(&model);
+  model_tsshmm(&model, *INTEGER(proseq));
   R_SetExternalPtrAddr(external_pointer, model);
   /* Destroy the model when the R object is garbage collected, including on
      exit of R. */
