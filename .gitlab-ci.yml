@@ -15,6 +15,7 @@ test:
     - Rscript -e 'system.time(devtools::install(dependencies = TRUE, quiet = TRUE))'
     - Rscript -e 'devtools::check(vignettes = FALSE, error_on = "error")'
     # Warn if any C code is undocumented.
+    - ./configure # Create src/Doxyfile from src/Doxyfile.in
     - pushd src/
     - doxygen
   cache:
