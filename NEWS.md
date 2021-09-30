@@ -27,7 +27,7 @@
 
 ## Bug fixes and improvements
 
-- Generating large GRanges of reversed windows has been singificantly sped up
+- Generating large GRanges of reversed windows has been significantly sped up
   from 52 minutes down to 2 seconds by hacking the GRanges and IRanges `tile()`
   core with a drop-in replacement called `tile_with_rev()`.  This is
   effectively a one-line code change to the core Bioconductor functions which
