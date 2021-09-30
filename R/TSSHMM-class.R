@@ -199,9 +199,6 @@ setMethod(
         range <- range(c(signal, bg))
         flog.info(sprintf("Train using %g bases", sum(lengths(range))))
 
-        ## Start monitoring memory and time use.
-        NULL
-
         ## Choose an initial batch size of least 10k windows and a small number
         ## of sequence rows and measure memory use for setting up this training
         ## dataset.  Select regions in random order to be encoded.
@@ -270,10 +267,6 @@ setMethod(
             flog.info(
                 sprintf("%4d: Model transition and emission matrices:", i))
             flog.info(sprintf("%s", as(model, "character")))
-
-            ## Adjust the batch size towards, say 80% of free memory, also
-            ## reporting the ratio of R training data and C-level Baum-Welch.
-            NULL
 
             ## Report training speed in windows per second, the batch number and
             ## remaining total batches, time for processing this batch, ETA to
