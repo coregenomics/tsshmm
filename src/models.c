@@ -161,7 +161,7 @@ model_tsshmm(ghmm_dmodel** model, int proseq)
   }
 
   /* Starting probabilities and fixed parameters. */
-  for (size_t i = 0; i < N_STATES; ++i) {
+  for (int i = 0; i < N_STATES; ++i) {
     states[i].pi = 0.0;
     states[i].fix = 0;
   }
