@@ -55,7 +55,7 @@ model_tsshmm(ghmm_dmodel** model, int proseq)
   states[B].b[0] = 0.90;	/* NO_SIGNAL */
   states[B].b[1] = 0.05;	/* ENRICHED */
   states[B].b[2] = 0.05;	/* DEPLETED */
-  tied_to[0] = GHMM_kUntied;
+  tied_to[B] = GHMM_kUntied;
   for (int N = N1; N <= N3; ++N) {
     states[N].b[0] = 0.09;
     states[N].b[1] = 0.90;
@@ -72,6 +72,7 @@ model_tsshmm(ghmm_dmodel** model, int proseq)
     states[GB].b[0] = 0.05;
     states[GB].b[1] = 0.05;
     states[GB].b[2] = 0.90;
+    tied_to[GB] = GHMM_kUntied;
   }
 
   /* Transitions: B. */
