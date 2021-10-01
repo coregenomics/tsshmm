@@ -7,7 +7,7 @@
 
 #include "models.h"
 
-/** Transcription start site discovery using 7-state HMM.
+/** Transcription start site discovery using HMM.
 
     This model was published in Core et al 2014 (doi:10.1038/ng.3142),
     providing the means to use signal and background nascent RNA
@@ -17,7 +17,7 @@
     step downstream from this HMM; the goal of the HMM is to find
     putative gene promoters and enhancers containing TSSs.
 
-    @param model Output pointer to initialized 7-state TSS HMM.
+    @param model Output pointer to initialized TSS HMM.
     @param proseq Whether to use PRO-seq as background instead of GRO-cap.
  */
 void
