@@ -220,17 +220,17 @@ setMethod(
 
         while (TRUE) {
             i <- i + 1
-            completed <- FALSE
+            finished <- FALSE
             tryCatch(chunk <- nextElem(iterator),
                      error = function(e) {
                          if (e$message == "StopIteration") {
-                             completed <<- TRUE
+                             finished <<- TRUE
                          } else { ## Unhandled error.
                              stop(e)
                          }
                      })
-            if (completed) {
-                flog.info("Training complete!")
+            if (finished) {
+                flog.info("Training finished!")
                 break
             }
             ## Begin measure time used for generating this batch of training data.
