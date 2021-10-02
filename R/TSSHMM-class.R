@@ -1,4 +1,4 @@
-#' @importFrom S4Vectors List
+#' @importFrom S4Vectors DataFrame List
 #' @importFrom futile.logger flog.info
 #' @importFrom iterators nextElem idiv
 #' @importFrom methods callNextMethod
@@ -110,8 +110,14 @@ setMethod(
         emis <- vector("numeric", length = n_states * n_emis);
         .Call(C_model_matrices, PACKAGE = "tsshmm", trans, emis,
               model@external_pointer)
-        list(trans = t(matrix(trans, nrow = n_states)),
-             emis = t(matrix(emis, ncol = n_states)))
+        ## These states must match the enum order in src/models.c
+        names_trans <-
+            c("B", "N1", "N2", "N3", "P1", "P2", "P3", "GB")[1:n_states]
+        names_emis <- c("no_signal", "enriched", "depleted")
+        list(trans = t(matrix(trans, nrow = n_states,
+                              dimnames = list(names_trans, names_trans))),
+             emis = t(matrix(emis, ncol = n_states,
+                             dimnames = list(names_emis, names_trans))))
     }
 )
 
@@ -158,6 +164,43 @@ setMethod(
     }
 )
 
+params_idx <- function(model) {
+    params <- parameters(model)
+    emis_tied <- vector(mode = "integer", length = nrow(params$emis))
+    .Call(C_model_tied_emis, PACKAGE = "tsshmm", emis_tied,
+          model@external_pointer)
+    n_emis <- prod(dim(params$emis))
+    list(trans = which(! is.na(params$trans)),
+         emis = matrix(1:n_emis,
+                           nrow = nrow(params$emis),
+                           ncol = ncol(params$emis))[unique(emis_tied), ])
+}
+
+params_names <- function(mat, idx) {
+    from <-
+        matrix(rownames(mat),
+               nrow = nrow(mat),
+               ncol = ncol(mat))[idx]
+    to <-
+        matrix(colnames(mat),
+               byrow = TRUE,
+               nrow = nrow(mat),
+               ncol = ncol(mat))[idx]
+    ## Use a dot as the separator, because DataFrame() column names don't allow
+    ## symbols like - or : unfortunately.
+    paste0(from, ".", to)
+}
+
+df_updates <- function(model, n) {
+    params <- parameters(model)
+    idx <- params_idx(model)
+    names_trans <- params_names(params$trans, idx$trans)
+    names_emis <- params_names(params$emis, idx$emis)
+    cols <- c("samples", names_trans, names_emis)
+    ## Allocation with -1.0 uninitialized probability values.
+    matrix(-1.0, nrow = n, ncol = length(cols), dimnames = list(NULL, cols))
+}
+
 #' @rdname TSSHMM-class
 #' @param model S4 object of a pre-designed hidden Markov model.
 #' @param signal Stranded, single base \code{GRanges} with integer score.
@@ -166,8 +209,11 @@ setGeneric("train", function(model, signal, bg) standardGeneric("train"))
 #' @rdname TSSHMM-class
 #' @section Model Training:
 #'
-#' `train(model, signal, background)` returns the model with trained transition
-#' and emission probabilities.  The arguments, `signal` and `bg`, are stranded,
+#' updates <- train(model, signal, background)
+#'
+#' `train(model, signal, background)` returns a `DataFrame` of parameters after
+#' each update, and transforms the model in-place with trained transition and
+#' emission probabilities.  The arguments, `signal` and `bg`, are stranded,
 #' single base `GRanges` with integer scores.
 #'
 #' After training, you may wish to save the parameters so that they can be
@@ -206,13 +252,20 @@ setMethod(
         set.seed(123)
         regions <- sample(unlist(tile(range, width = width), use.names = FALSE))
         rows <- 1e3
+        n_batches <- ceiling(length(regions) / rows)
         flog.info(sprintf(paste(
             "Creating %d batches with up to %d rows each"),
-            ceiling(length(regions) / rows), rows))
+            n_batches, rows))
         completed <- 0
         t_elapsed <- 0
         i <- 0
         iterator <- idiv(length(regions), chunkSize = rows)
+        ## Allocate "updates" for plotting parameter changes later.  Adding +1
+        ## to n_batches is to store the initial parameter values.
+        updates <- df_updates(model, n_batches + 1)
+        idx <- params_idx(model)
+        n_params <- length(unlist(idx))
+        obs <- vector() # For recording initial value of updates$samples
 
         flog.info(
             sprintf("%4d: Model initial transition and emission matrices:", 0))
@@ -220,6 +273,10 @@ setMethod(
 
         while (TRUE) {
             i <- i + 1
+            updates[i, 1] <- sum(lengths(obs))
+            updates[i, 1 + 1:n_params] <-
+                c(parameters(model)$trans[idx$trans],
+                  parameters(model)$emis[idx$emis])
             finished <- FALSE
             tryCatch(chunk <- nextElem(iterator),
                      error = function(e) {
@@ -290,6 +347,7 @@ setMethod(
 
             ## Repeat until completing a single pass of all data.
         }
+        DataFrame(updates)
     }
 )
 

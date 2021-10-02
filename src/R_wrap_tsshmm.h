@@ -12,6 +12,7 @@ SEXP C_model_tsshmm(SEXP, SEXP);
 SEXP C_model_sizes(SEXP, SEXP, SEXP);
 SEXP C_model_matrices(SEXP, SEXP, SEXP);
 SEXP C_model_set_matrices(SEXP, SEXP, SEXP);
+SEXP C_model_tied_emis(SEXP, SEXP);
 SEXP C_train(SEXP, SEXP, SEXP, SEXP);
 SEXP C_viterbi(SEXP, SEXP, SEXP, SEXP);
 SEXP C_tss(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);

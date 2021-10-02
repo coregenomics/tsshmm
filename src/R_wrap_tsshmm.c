@@ -85,6 +85,21 @@ C_model_set_matrices(SEXP trans, SEXP emis, SEXP model)
   return R_NilValue;
 }
 
+
+/** Read tied emissions from the model.
+
+    @param tied_emis Output 1-based indices of tied emissions.
+    @param model Pointer to initialized HMM.
+    @return The nil object
+ */
+SEXP
+C_model_tied_emis(SEXP tied_emis, SEXP model)
+{
+  model_tied_emis(INTEGER(tied_emis), R_ExternalPtrAddr(model));
+  return R_NilValue;
+}
+
+
 /** Run Baum-Welch training using streaming logic for large input data.
 
     Run a single step of Buam-Welch training, because we cannot fit the entire

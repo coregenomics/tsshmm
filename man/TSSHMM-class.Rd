@@ -141,8 +141,11 @@ emissions.
 \section{Model Training}{
 
 
-\code{train(model, signal, background)} returns the model with trained transition
-and emission probabilities.  The arguments, \code{signal} and \code{bg}, are stranded,
+updates <- train(model, signal, background)
+
+\code{train(model, signal, background)} returns a \code{DataFrame} of parameters after
+each update, and transforms the model in-place with trained transition and
+emission probabilities.  The arguments, \code{signal} and \code{bg}, are stranded,
 single base \code{GRanges} with integer scores.
 
 After training, you may wish to save the parameters so that they can be

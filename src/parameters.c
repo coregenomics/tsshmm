@@ -61,3 +61,16 @@ model_set_matrices(double* trans, double* emis, ghmm_dmodel* model)
   /* Validate the model. */
   assert(ghmm_dmodel_check(model) == 0);
 }
+
+/** Read tied emissions from the model.
+
+    @param tied_emis Output 1-based indices of tied emissions.
+    @param model Pointer to initialized HMM.
+ */
+void
+model_tied_emis(int* tied_emis, ghmm_dmodel* model)
+{
+  for (int i = 0; i < model->N; ++i)
+    tied_emis[i] =
+      (model->tied_to[i] == GHMM_kUntied) ? i + 1 : model->tied_to[i] + 1;
+}
