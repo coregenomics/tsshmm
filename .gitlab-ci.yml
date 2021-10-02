@@ -11,7 +11,7 @@ test:
     - apt -qqq update
     - apt -qqq install devscripts libtool doxygen
     # The usual.
-    - autoreconf --verbose --install --force
+    - autoreconf --verbose --install --force --warnings=all
     - Rscript -e 'system.time(devtools::install(dependencies = TRUE, quiet = TRUE))'
     - Rscript -e 'devtools::check(vignettes = FALSE, error_on = "error")'
     # Warn if any C code is undocumented.

@@ -16,6 +16,7 @@ AC_INIT(tsshmm, m4_defn([tsshmm_VERSION]))
 AC_CONFIG_AUX_DIR([tools])
 AC_CONFIG_MACRO_DIR([tools])
 AM_INIT_AUTOMAKE
+AM_PROG_AR
 LT_INIT([disable-static])
 # Use R-specific flags per
 # https://cran.r-project.org/doc/manuals/r-release/R-exts.html#Configure-and-cleanup
@@ -101,16 +102,17 @@ AS_IF(test x$force_ghmm_root != xyes,
       [AS_IF(test x$with_ghmm_strategy != xno,
              AC_MSG_RESULT($with_ghmm_strategy),
              [AC_MSG_RESULT([invalid, but might be --with-ghmm=GHMM_ROOT])]
-      )] # AC_IF
+      )] # AS_IF
 ) # AS_IF
 #
 # Is GHMM_ROOT from the environmental variable or from --with-ghmm a valid
 # path?  Either is a valid path invalid path or invalid input.
 AS_IF([test x$with_ghmm_strategy = x],
       AC_MSG_NOTICE(checking whether GHMM_ROOT=$with_ghmm is a valid path)
-      AC_CHECK_FILE($with_ghmm, [with_ghmm_strategy=no],
-                    AC_MSG_FAILURE(The directory GHMM_ROOT=$with_ghmm was not found.)
-      ) # AC_CHECK_FILE
+      AS_IF([test -d $with_ghmm],
+            [with_ghmm_strategy=no],
+            AC_MSG_FAILURE(The directory GHMM_ROOT=$with_ghmm was not found.)
+      ) # AS_IF
 ) # AS_IF
 
 AC_SUBST(GHMM_LIBS, -lghmm)
@@ -121,13 +123,13 @@ AC_SUBST(GHMM_LIBS, -lghmm)
 # present add them to CFLAGS and LDFLAGS per
 # https://stackoverflow.com/a/44534707
 AS_IF(test x$with_ghmm_strategy = xno,
-      AC_CHECK_FILE($with_ghmm/include/ghmm/ghmm.h,
-                    [AC_SUBST(GHMM_CPPFLAGS, ["-I$with_ghmm/include"])]
-                    AC_MSG_FAILURE(GHMM header not found.))
-      AC_CHECK_FILE($with_ghmm/lib/libghmm.so,
-                    [AC_SUBST(GHMM_LDFLAGS,
-                              ["-Wl,-rpath=$with_ghmm/lib -L$with_ghmm/lib"])],
-                    AC_MSG_FAILURE(GHMM library not found.))
+      AS_IF([test -f $with_ghmm/include/ghmm/ghmm.h],
+            [AC_SUBST(GHMM_CPPFLAGS, ["-I$with_ghmm/include"])]
+            AC_MSG_FAILURE(GHMM header not found.))
+      AS_IF([test -f $with_ghmm/lib/libghmm.so],
+            [AC_SUBST(GHMM_LDFLAGS,
+                     ["-Wl,-rpath=$with_ghmm/lib -L$with_ghmm/lib"])],
+            AC_MSG_FAILURE(GHMM library not found.))
 ) # AS_IF
 
 AS_IF(test x$with_ghmm_strategy = xsystem -o \
@@ -166,8 +168,8 @@ AS_IF(test x$found_ghmm_system != xyes &&
                              [--prefix=$PWD/src/libunix]])]
       # Our recursive automake rule needs the absolute path of GHMM_ROOT.
       [AC_SUBST(GHMM_ROOT, ["$PWD/src/ghmm-0.9-rc3/ghmm"])]
-      [AC_CHECK_FILE($GHMM_ROOT, [],
-                     AC_MSG_FAILURE(Directory of bundled GHMM not found.))]
+      [AS_IF([test -d $GHMM_ROOT], [],
+             AC_MSG_FAILURE(Directory of bundled GHMM not found.))]
       [AC_SUBST(GHMM_CPPFLAGS, ["-I$GHMM_ROOT/.."])]
       # Using -rpath=. prefers the bundled over any system installation.
       [AC_SUBST(GHMM_LDFLAGS, ["-Wl,-rpath=. -L$GHMM_ROOT/.libs"])]
