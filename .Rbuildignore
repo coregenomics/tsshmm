@@ -1,6 +1,7 @@
 ^LICENSE\.md$
 ^Meta$
 ^\.gitlab-ci\.yml$
+^data-raw$
 ^doc$
 ^library$
 ^src/\.dir-locals\.el$

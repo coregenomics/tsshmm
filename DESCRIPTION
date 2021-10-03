@@ -33,7 +33,8 @@ biocViews:
     Sequencing,
     Annotation
 Depends:
-    GenomicRanges
+    GenomicRanges,
+    R (>= 2.10)
 Imports:
     BiocGenerics,
     IRanges,
@@ -45,7 +46,9 @@ Imports:
     stats
 Suggests:
     BiocStyle,
+    UpSetR,
     dplyr,
+    ggplot2,
     knitr,
     purrr,
     rmarkdown,

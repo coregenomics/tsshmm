@@ -1,6 +1,7 @@
 .Rhistory
 /Meta/
 /doc/
+data-raw/core2014full.rda
 inst/doc
 *.RData
 

@@ -82,6 +82,96 @@ and even result in incorrect discontiguous calls.
     a short intense center.}
 \end{smallfigure}
 
+# Model training
+
+```{r Inspect core 2014 data}
+data(core2014)
+core2014
+```
+
+```{r Train GRO-cap}
+(model_grocap <- new("TSSHMM"))
+signal <- core2014[["GROcap_wTAP"]]
+bg <- core2014[["GROcap_noTAP"]]
+
+system.time({
+    log_grocap <- train(model_grocap, signal, bg)
+    for (i in  2:20) {
+        log <- train(model_grocap, signal, bg)
+        log_grocap <- rbind(log_grocap, log[-1, ])
+    }
+})
+
+library(ggplot2)
+library(dplyr)
+
+df_long <- function(df)
+    df %>%
+        as_tibble() %>%
+        mutate(i = row_number() - 1,
+               samples = cumsum(samples)) %>%
+        gather(key = "parameter", value = "probability", -i, -samples) %>%
+        mutate(type = ifelse(str_length(parameter) > 5,
+                             "emission", "transition"))
+
+plot_params <- function(df)
+    ggplot(df, aes(samples, probability, color = parameter, group = parameter)) +
+        geom_line() +
+        geom_label(data = dplyr::filter(df, i == ceiling(max(i) / 2)),
+                   aes(label = parameter)) +
+        facet_wrap(~ type) +
+        guides(color = "none", label = "none")
+
+plot_params(df_long(log_grocap))
+```
+
+```{r Train GRO-seq}
+model_groseq <- new("TSSHMM", bg_proseq = TRUE)
+
+signal <- core2014[["GROcap_wTAP"]]
+bg <- core2014[["GROseq"]]
+
+system.time({
+    log_groseq <- train(model_groseq, signal, bg)
+    for (i in  2:20) {
+        log <- train(model_groseq, signal, bg)
+        log_groseq <- rbind(log_groseq, log[-1, ])
+    }
+})
+
+plot_params(df_long(log_groseq))
+```
+
+# Model inference
+
+```{r Find promoters}
+signal <- core2014[["GROcap_wTAP"]]
+bg <- core2014[["GROcap_noTAP"]]
+prom_grocap <- granges(viterbi(model_grocap, signal, bg, tol = 1e-2))
+tss_grocap <- tss(signal, prom_grocap)
+
+signal <- core2014[["GROcap_wTAP"]]
+bg <- core2014[["GROseq"]]
+prom_groseq <- granges(viterbi(model_groseq, signal, bg, tol = 1e-2))
+tss_groseq <- tss(signal, prom_groseq)
+```
+
+# Model comparison
+
+```{r Compare model outputs}
+ol <- findOverlaps(tss_grocap, tss_groseq)
+
+library(UpSetR)
+
+x <-
+    fromExpression(
+        c(grocap = length(tss_grocap),
+          groseq  = length(tss_groseq),
+          `grocap&groseq` = length(ol)))
+
+upset(x, order.by = "freq")
+```
+
 \bibliography{refs}
 
 \appendix
@@ -250,7 +340,6 @@ B <- t(matrix(c(c(.9, .05, .05),
 psi <- function(pi, n = 1) c(B %*% t(H %*% L^n %*% H_inv) %*% unlist(pi))
 ## Try each state as the starting value.
 pis <- unlist(apply(diag(7), 1, list), recursive = FALSE)
-library(dplyr)
 library(tidyr) # expand_grid
 library(purrr) # pmap
 grid <- expand_grid(n = seq(1, 100), pi = pis)
