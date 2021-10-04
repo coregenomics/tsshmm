@@ -18,6 +18,8 @@ test:
     - ./configure # Create src/Doxyfile from src/Doxyfile.in
     - pushd src/
     - doxygen
+    # Coverage.
+    - Rscript -e 'covr::package_coverage()'
   cache:
     paths:
       - library/
