@@ -1,3 +1,24 @@
+context("tss helpers")
+
+test_that("replace_unstranded ignores stranded regions", {
+    gr <- GRanges(c("chr:100:+", "chr:200:-"))
+    expect_equal(replace_unstranded(gr), gr)
+    gr <- GRanges(c("chr:100:-", "chr:200:+"))
+    expect_equal(replace_unstranded(gr), sort(gr))
+})
+
+test_that("replace_unstranded splits unstranded into + and -", {
+    expect_equal(replace_unstranded(GRanges("chr:100")),
+                 GRanges(c("chr:100:+", "chr:100:-")))
+    expect_equal(replace_unstranded(GRanges(c("chr:100", "chr:200:+"))),
+                 sort(GRanges(c("chr:100:+", "chr:100:-", "chr:200:+"))))
+})
+
+test_that("replace_unstranded ignores empty GRanges", {
+    gr <- GRanges()
+    expect_equal(replace_unstranded(gr), gr)
+})
+
 context("tss")
 
 test_that("tss checks inputs", {
