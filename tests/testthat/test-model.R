@@ -16,3 +16,15 @@ test_that("TSSHMM model flags invalid bg_proseq input", {
     expect_silent(new("TSSHMM", bg_proseq = TRUE))
     expect_silent(new("TSSHMM", bg_proseq = FALSE))
 })
+
+test_that("TSSHMM parameters can be saved and loaded", {
+    model <- new("TSSHMM")
+    params_orig <- parameters(model)
+    params_new <- params_orig
+    params_new$trans["B", ] <- c(0.9, 0.05, NA, NA, 0.05, NA, NA)
+    stopifnot(all(rowSums(params_new$trans, na.rm = TRUE) == 1))
+    params_new$emis[paste0("P", 1:3), ] <- rep(c(0.2, 0.4, 0.4), each = 3)
+    stopifnot(all(rowSums(params_new$emis) == 1))
+    parameters(model) <- params_new
+    expect_equal(parameters(model), params_new)
+})
