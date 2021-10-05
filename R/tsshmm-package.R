@@ -4,5 +4,5 @@
 NULL
 
 .onUnload <- function (libpath) {
-    library.dynam.unload("tsshmm", libpath)
+    library.dynam.unload("tsshmm", libpath) # nocov
 }
