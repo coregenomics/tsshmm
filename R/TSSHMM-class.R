@@ -409,6 +409,8 @@ setMethod(
     }
 )
 
+stranded <- function(x) split(x, strand(x))[-3] # -3 removes "*" strand.
+
 #' @rdname TSSHMM-class
 setGeneric("viterbi",
            function(model, signal, bg, ...) standardGeneric("viterbi"))

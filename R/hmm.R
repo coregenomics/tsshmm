@@ -46,8 +46,6 @@ check_valid_hmm_reads <- function(gr) {
     stopifnot(all(score(gr) >= 0L))
 }
 
-stranded <- function(x) split(x, strand(x))[-3] # -3 removes "*" strand.
-
 ## Rely on annotations for now.  Based on the data below, more careful work is
 ## required to adjust the methodology to be annotation free.  This is because
 ## choosing thresholds for how far apart GRO-cap counts can be to consider them
