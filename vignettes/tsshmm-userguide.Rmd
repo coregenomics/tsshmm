@@ -93,11 +93,12 @@ core2014
 (model_grocap <- new("TSSHMM"))
 signal <- core2014[["GROcap_wTAP"]]
 bg <- core2014[["GROcap_noTAP"]]
+batches_grocap <- create_batches(signal, bg)
 
 system.time({
-    log_grocap <- train(model_grocap, signal, bg)
+    log_grocap <- train(model_grocap, batches_grocap)
     for (i in  2:20) {
-        log <- train(model_grocap, signal, bg)
+        log <- train(model_grocap, batches_grocap)
         log_grocap <- rbind(log_grocap, log[-1, ])
     }
 })
@@ -130,11 +131,12 @@ model_groseq <- new("TSSHMM", bg_proseq = TRUE)
 
 signal <- core2014[["GROcap_wTAP"]]
 bg <- core2014[["GROseq"]]
+batches_groseq <- create_batches(signal, bg)
 
 system.time({
-    log_groseq <- train(model_groseq, signal, bg)
+    log_groseq <- train(model_groseq, batches_groseq)
     for (i in  2:20) {
-        log <- train(model_groseq, signal, bg)
+        log <- train(model_groseq, batches_groseq)
         log_groseq <- rbind(log_groseq, log[-1, ])
     }
 })

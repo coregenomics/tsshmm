@@ -202,19 +202,122 @@ df_updates <- function(model, n) {
 }
 
 #' @rdname TSSHMM-class
-#' @param model S4 object of a pre-designed hidden Markov model.
-#' @param signal Stranded, single base \code{GRanges} with integer score.
-#' @param bg Stranded, single base \code{GRanges} with integer score.
-setGeneric("train", function(model, signal, bg) standardGeneric("train"))
-#' @rdname TSSHMM-class
 #' @section Model Training:
 #'
-#' updates <- train(model, signal, background)
+#' batches <- create_batches(signal, background)
+#' updates <- train(model, batches)
+#'
+#' `batches(signal, background)` returns a `list` of `IntegerList` encoded
+#' observation states for training.  The arguments, `signal` and `bg`, are
+#' stranded, single base `GRanges` with integer scores.
+#'
+#' The batch sizes are not configurable due to the limits of the maximum matrix
+#' size of the Baum-Welch training implementation, and minimum sequence count
+#' for training the >= 0.99 probability of the background hidden state.
+#'
+#' @param signal Stranded, single base \code{GRanges} with integer score.
+#' @param bg Stranded, single base \code{GRanges} with integer score.
+#' @param seed Integer, seed used to shuffle the genome regions.
+#' @export
+create_batches <- function(signal, bg, seed = 123) {
+    check_valid_hmm_reads(signal)
+    check_valid_hmm_reads(bg)
+    ## Train using both strands.  Use range() to estimate number of bases
+    ## to feed for training.
+    range <- range(c(signal, bg))
+    width <- 1e5
+    flog.info(sprintf("Split %g bases into %d windows and randomize sequence",
+                      sum(lengths(range)), width))
+    ## Choose an initial batch size of most 100kb width windows and a small
+    ## number of sequence rows and measure memory use for setting up this
+    ## training dataset.  Select regions in random order to be encoded.
+    set.seed(seed)
+    regions <- sample(unlist(tile(range, width = width), use.names = FALSE))
+    rows <- 1e3
+    n_batches <- ceiling(length(regions) / rows)
+    flog.info(sprintf(paste(
+        "Creating %d batches with up to %d rows of windows each"),
+        n_batches, rows))
+    obs <- list()
+    completed <- 0
+    t_elapsed <- 0
+    i <- 0
+    iterator <- idiv(length(regions), chunkSize = rows)
+
+    while (TRUE) {
+        i <- i + 1
+        finished <- FALSE
+        tryCatch(chunk <- nextElem(iterator),
+                 error = function(e) {
+                     if (e$message == "StopIteration") {
+                         finished <<- TRUE
+                     } else { ## Unhandled error.
+                         stop(e)
+                     }
+                 })
+        if (finished) {
+            flog.info("Finished creating batches!")
+            break
+        }
+        ## Begin measure time used for generating this batch of training data.
+        t_start <- Sys.time()
+        gr <- regions[(completed+1):(completed+chunk)]
+        completed <- completed + chunk
+        flog.info(
+            sprintf("%4d: Tiling and encoding %d regions for training",
+                    i, length(gr)))
+        windows <- mapply(tile_with_rev,
+                          x = as(gr, "GRangesList"),
+                          rev = as.vector(strand(gr) == "-"),
+                          MoreArgs = list(width = 10))
+        ## This encode() line uses a massive 70x peak memory than final
+        ## result according to peakRAM::peakRAM() and could stand to be
+        ## optimized.  It's not clear how much of the large memory use is
+        ## from running the unlist(List(...)).  In any case, an optimal way
+        ## to address this would be to change the preceding function
+        ## tile_with_rev() to natively generate GRanges using vectorized
+        ## rev input to eliminate wrapping the function with mapply() which
+        ## produces the undesirable list output.
+        obs[i] <- encode(signal, bg, unlist(List(windows)))
+        ## End measure time used for generating this batch of data.
+        t_end <- Sys.time()
+        t_diff <- difftime(t_end, t_start, units = "secs")
+        t_elapsed <- t_elapsed + t_diff
+        ## Report batch generation speed in windows per second, the batch
+        ## number and remaining total batches, time for processing this
+        ## batch, ETA to process remaining batches, total time elapsed, and
+        ## total time of since beginning of training.
+        elapsed_mins <- as.numeric(t_elapsed, units = "mins")
+        rate_mins <- completed / elapsed_mins
+        remaining <- length(regions) - completed
+        eta_mins <- remaining / rate_mins
+        flog.info(sprintf(paste("%4d: This batch: %.0f secs",
+                                "Elapsed: %.1f mins",
+                                "Completed: %d/%d regions",
+                                "Rate: %.1f regions/min",
+                                "ETA: %.0f mins",
+                                sep = ", "),
+                          i, as.numeric(t_diff, units = "secs"),
+                          elapsed_mins,
+                          completed, length(regions),
+                          rate_mins,
+                          eta_mins))
+        ## Repeat until completing a single pass of all data.
+    }
+    obs
+}
+
+#' @rdname TSSHMM-class
+#' @param model S4 object of a pre-designed hidden Markov model.
+#' @param batches list of integers of encoded windows.
+setGeneric("train", function(model, batches) standardGeneric("train"))
+#' @rdname TSSHMM-class
 #'
 #' `train(model, signal, background)` returns a `DataFrame` of parameters after
-#' each update, and transforms the model in-place with trained transition and
-#' emission probabilities.  The arguments, `signal` and `bg`, are stranded,
-#' single base `GRanges` with integer scores.
+#' each update, and transforms the `model` argument in-place with trained
+#' transition and emission probabilities.  The argument, `batches` produced by
+#' the `create_batches()` function contains the encoded observation states
+#' chunked into the `list` of batches.
 #'
 #' After training, you may wish to save the parameters so that they can be
 #' reloaded in a later session as explained in the examples.
@@ -236,32 +339,11 @@ setGeneric("train", function(model, signal, bg) standardGeneric("train"))
 #' @exportMethod train
 setMethod(
     "train",
-    signature = c("TSSHMM", "GRanges", "GRanges"),
-    definition = function(model, signal, bg) {
-        check_valid_hmm_reads(signal)
-        check_valid_hmm_reads(bg)
-        ## Train using both strands.  Use range() to estimate number of bases
-        ## to feed for training.
-        range <- range(c(signal, bg))
-        flog.info(sprintf("Train using %g bases", sum(lengths(range))))
-
-        ## Choose an initial batch size of least 10k windows and a small number
-        ## of sequence rows and measure memory use for setting up this training
-        ## dataset.  Select regions in random order to be encoded.
-        width <- 1e5
-        set.seed(123)
-        regions <- sample(unlist(tile(range, width = width), use.names = FALSE))
-        rows <- 1e3
-        n_batches <- ceiling(length(regions) / rows)
-        flog.info(sprintf(paste(
-            "Creating %d batches with up to %d rows each"),
-            n_batches, rows))
-        completed <- 0
-        t_elapsed <- 0
-        i <- 0
-        iterator <- idiv(length(regions), chunkSize = rows)
+    signature = c("TSSHMM", "list"),
+    definition = function(model, batches) {
         ## Allocate "updates" for plotting parameter changes later.  Adding +1
         ## to n_batches is to store the initial parameter values.
+        n_batches <- length(batches)
         updates <- df_updates(model, n_batches + 1)
         idx <- params_idx(model)
         n_params <- length(unlist(idx))
@@ -271,44 +353,17 @@ setMethod(
             sprintf("%4d: Model initial transition and emission matrices:", 0))
         flog.info(sprintf("%s", as(model, "character")))
 
-        while (TRUE) {
-            i <- i + 1
-            updates[i, 1] <- sum(lengths(obs))
-            updates[i, 1 + 1:n_params] <-
-                c(parameters(model)$trans[idx$trans],
-                  parameters(model)$emis[idx$emis])
-            finished <- FALSE
-            tryCatch(chunk <- nextElem(iterator),
-                     error = function(e) {
-                         if (e$message == "StopIteration") {
-                             finished <<- TRUE
-                         } else { ## Unhandled error.
-                             stop(e)
-                         }
-                     })
-            if (finished) {
-                flog.info("Training finished!")
-                break
-            }
+        updates[1, 1] <- sum(lengths(obs))
+        updates[1, 1 + 1:n_params] <-
+            c(parameters(model)$trans[idx$trans],
+              parameters(model)$emis[idx$emis])
+
+        for (i in seq_along(batches)) {
             ## Begin measure time used for generating this batch of training data.
             t_start <- Sys.time()
             gr <- regions[(completed+1):(completed+chunk)]
             completed <- completed + chunk
-            flog.info(
-                sprintf("%4d: Tiling and encoding %d regions for training", i, length(gr)))
-            windows <- mapply(tile_with_rev,
-                              x = as(gr, "GRangesList"),
-                              rev = as.vector(strand(gr) == "-"),
-                              MoreArgs = list(width = 10))
-            ## This encode() line uses a massive 70x peak memory than final
-            ## result according to peakRAM::peakRAM() and could stand to be
-            ## optimized.  It's not clear how much of the large memory use is
-            ## from running the unlist(List(...)).  In any case, an optimal way
-            ## to address this would be to change the preceding function
-            ## tile_with_rev() to natively generate GRanges using vectorized
-            ## rev input to eliminate wrapping the function with mapply() which
-            ## produces the undesirable list output.
-            obs <- encode(signal, bg, unlist(List(windows)))
+            obs <- batches[[1]]
             flog.info(sprintf("%4d: Running Baum-Welch", i))
             converged <- NA
             .Call(C_train, PACKAGE = "tsshmm", converged,
@@ -344,9 +399,12 @@ setMethod(
                               completed, length(regions),
                               rate_mins,
                               eta_mins))
-
-            ## Repeat until completing a single pass of all data.
+            updates[i+1, 1] <- sum(lengths(obs))
+            updates[i+1, 1 + 1:n_params] <-
+                c(parameters(model)$trans[idx$trans],
+                  parameters(model)$emis[idx$emis])
         }
+        flog.info("Finished training!")
         DataFrame(updates)
     }
 )
