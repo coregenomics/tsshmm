@@ -17,25 +17,6 @@ test_that("TSSHMM model flags invalid bg_proseq input", {
     expect_silent(new("TSSHMM", bg_proseq = FALSE))
 })
 
-test_that("TSSHMM states and emissions can be read with dim", {
-    model <- new("TSSHMM", bg_proseq = FALSE)
-    expect_equal(dim(model), c(states = 7, emissions = 3))
-    model <- new("TSSHMM", bg_proseq = TRUE)
-    expect_equal(dim(model), c(states = 8, emissions = 3))
-})
-
-test_that("TSSHMM parameters can be saved and loaded", {
-    model <- new("TSSHMM")
-    params_orig <- parameters(model)
-    params_new <- params_orig
-    params_new$trans["B", ] <- c(0.9, 0.05, NA, NA, 0.05, NA, NA)
-    stopifnot(all(rowSums(params_new$trans, na.rm = TRUE) == 1))
-    params_new$emis[paste0("P", 1:3), ] <- rep(c(0.2, 0.4, 0.4), each = 3)
-    stopifnot(all(rowSums(params_new$emis) == 1))
-    parameters(model) <- params_new
-    expect_equal(parameters(model), params_new)
-})
-
 test_that("TSSHMM model is coerced to compact character strings", {
     model <- new("TSSHMM")
     lines <- as(model, "character")
