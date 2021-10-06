@@ -89,7 +89,7 @@ setMethod(
 #' @rdname TSSHMM-class
 #' @section Accessors:
 #'
-#' `dim(model)` returns the number of states and emissions.
+#' `dim(x)` returns the number of states and emissions.
 #'
 #' `parameters(model)`, `parameters(model) <- list(trans = ..., emis = ...)`
 #' gets or sets 2 matrices: the transition state probability matrix, and the
@@ -98,6 +98,7 @@ setMethod(
 #' After training a model, you may wish to save the parameters to later reload
 #' to eliminiate retraining the model in the future.
 #'
+#' @param x S4 object of a pre-designed hidden Markov model.
 #' @exportMethod dim
 setMethod(
     "dim",
