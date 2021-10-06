@@ -296,7 +296,7 @@ create_batches <- function(signal, bg, seed = 123, nrow = 1e3) {
                      if (e$message == "StopIteration") {
                          finished <<- TRUE
                      } else { ## Unhandled error.
-                         stop(e)
+                         stop(e) # nocov
                      }
                  })
         if (finished) {
