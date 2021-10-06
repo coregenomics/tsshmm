@@ -87,9 +87,9 @@ setMethod(
 )
 
 #' @rdname TSSHMM-class
-setGeneric("parameters", function(model) standardGeneric("parameters"))
-#' @rdname TSSHMM-class
 #' @section Accessors:
+#'
+#' `dim(model)` returns the number of states and emissions.
 #'
 #' `parameters(model)`, `parameters(model) <- list(trans = ..., emis = ...)`
 #' gets or sets 2 matrices: the transition state probability matrix, and the
@@ -97,15 +97,33 @@ setGeneric("parameters", function(model) standardGeneric("parameters"))
 #'
 #' After training a model, you may wish to save the parameters to later reload
 #' to eliminiate retraining the model in the future.
+#'
+#' @exportMethod dim
+setMethod(
+    "dim",
+    signature = "TSSHMM",
+    definition = function(x) {
+        n_states <- vector("integer", length = 1)
+        n_emis <- vector("integer", length = 1)
+        .Call(C_model_sizes, PACKAGE = "tsshmm", n_states, n_emis,
+              x@external_pointer)
+        dim <- c(n_states, n_emis)
+        names(dim) <- c("states", "emissions")
+        dim
+    }
+)
+
+#' @rdname TSSHMM-class
+setGeneric("parameters", function(model) standardGeneric("parameters"))
+#' @rdname TSSHMM-class
 #' @exportMethod parameters
 setMethod(
     "parameters",
     signature = "TSSHMM",
     definition = function(model) {
-        n_states <- vector("integer", length = 1);
-        n_emis <- vector("integer", length = 1);
-        .Call(C_model_sizes, PACKAGE = "tsshmm", n_states, n_emis,
-              model@external_pointer)
+        dim <- dim(model)
+        n_states <- dim["states"]
+        n_emis <- dim["emissions"]
         trans <- vector("numeric", length = n_states * n_states);
         emis <- vector("numeric", length = n_states * n_emis);
         .Call(C_model_matrices, PACKAGE = "tsshmm", trans, emis,
@@ -152,7 +170,7 @@ setMethod(
     signature = "TSSHMM",
     definition = function(object) {
         params <- parameters(object)
-        dim <- dim(params$emis)
+        dim <- dim(object)
         cat(paste(as.character(class(object)), "object with",
                   dim[1], "hidden states and",
                   dim[2], "emissions:\n"))
@@ -169,11 +187,12 @@ params_idx <- function(model) {
     emis_tied <- vector(mode = "integer", length = nrow(params$emis))
     .Call(C_model_tied_emis, PACKAGE = "tsshmm", emis_tied,
           model@external_pointer)
-    n_emis <- prod(dim(params$emis))
+    dim <- dim(model)
+    n_emis <- prod(dim)
     list(trans = which(! is.na(params$trans)),
          emis = matrix(1:n_emis,
-                           nrow = nrow(params$emis),
-                           ncol = ncol(params$emis))[unique(emis_tied), ])
+                       nrow = dim[1],
+                       ncol = dim[2])[unique(emis_tied), ])
 }
 
 params_names <- function(mat, idx) {
@@ -214,6 +233,29 @@ df_updates <- function(model, n) {
 #' The batch sizes are not configurable due to the limits of the maximum matrix
 #' size of the Baum-Welch training implementation, and minimum sequence count
 #' for training the >= 0.99 probability of the background hidden state.
+#'
+#' `train(model, signal, background)` returns a `DataFrame` of parameters after
+#' each update, and transforms the `model` argument in-place with trained
+#' transition and emission probabilities.  The argument, `batches` produced by
+#' the `create_batches()` function contains the encoded observation states
+#' chunked into the `list` of batches.
+#'
+#' After training, you may wish to save the parameters so that they can be
+#' reloaded in a later session as explained in the examples.
+#'
+#' To train the model, the sparse reads of the signal and background need to be
+#' exploded into dense encoded windows categorized as either enriched, depleted
+#' or no-read observations, which are then processed by the Baum-Welch EM
+#' algorithm to update the model transition and emission probabilities.
+#'
+#' The training data are randomized and divided into batches large enough to
+#' provide sufficient samples for the calculating the background state
+#' transitions, but small enough to work within numerical precision limits and
+#' to make the training process more observable.  On each batch, the input
+#' training data is transformed into dense training observations and then the
+#' Baum-Welch algorithm is run.  After each batch, the model state is shown
+#' alongside a time estimate to complete training if the logging level has not
+#' been reduced from the INFO level.
 #'
 #' @param signal Stranded, single base \code{GRanges} with integer score.
 #' @param bg Stranded, single base \code{GRanges} with integer score.
@@ -312,29 +354,6 @@ create_batches <- function(signal, bg, seed = 123) {
 #' @param batches list of integers of encoded windows.
 setGeneric("train", function(model, batches) standardGeneric("train"))
 #' @rdname TSSHMM-class
-#'
-#' `train(model, signal, background)` returns a `DataFrame` of parameters after
-#' each update, and transforms the `model` argument in-place with trained
-#' transition and emission probabilities.  The argument, `batches` produced by
-#' the `create_batches()` function contains the encoded observation states
-#' chunked into the `list` of batches.
-#'
-#' After training, you may wish to save the parameters so that they can be
-#' reloaded in a later session as explained in the examples.
-#'
-#' To train the model, the sparse reads of the signal and background need to be
-#' exploded into dense encoded windows categorized as either enriched, depleted
-#' or no-read observations, which are then processed by the Baum-Welch EM
-#' algorithm to update the model transition and emission probabilities.
-#'
-#' The training data are randomized and divided into batches large enough to
-#' provide sufficient samples for the calculating the background state
-#' transitions, but small enough to work within numerical precision limits and
-#' to make the training process more observable.  On each batch, the input
-#' training data is transformed into dense training observations and then the
-#' Baum-Welch algorithm is run.  After each batch, the model state is shown
-#' alongside a time estimate to complete training if the logging level has not
-#' been reduced from the INFO level.
 #'
 #' @exportMethod train
 setMethod(
