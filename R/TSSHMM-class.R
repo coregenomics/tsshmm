@@ -320,7 +320,7 @@ create_batches <- function(signal, bg, seed = 123) {
         ## tile_with_rev() to natively generate GRanges using vectorized
         ## rev input to eliminate wrapping the function with mapply() which
         ## produces the undesirable list output.
-        obs[i] <- encode(signal, bg, unlist(List(windows)))
+        obs[[i]] <- encode(signal, bg, unlist(List(windows)))
         ## End measure time used for generating this batch of data.
         t_end <- Sys.time()
         t_diff <- difftime(t_end, t_start, units = "secs")
