@@ -261,8 +261,10 @@ df_updates <- function(model, n) {
 #' @param signal Stranded, single base \code{GRanges} with integer score.
 #' @param bg Stranded, single base \code{GRanges} with integer score.
 #' @param seed Integer, seed used to shuffle the genome regions.
+#' @param nrow Integer, rows per batch.  Used for unit tests and not
+#'     recommended to change because this value is optimal.
 #' @export
-create_batches <- function(signal, bg, seed = 123) {
+create_batches <- function(signal, bg, seed = 123, nrow = 1e3) {
     check_valid_hmm_reads(signal)
     check_valid_hmm_reads(bg)
     ## Train using both strands.  Use range() to estimate number of bases
@@ -276,16 +278,15 @@ create_batches <- function(signal, bg, seed = 123) {
     ## training dataset.  Select regions in random order to be encoded.
     set.seed(seed)
     regions <- sample(unlist(tile(range, width = width), use.names = FALSE))
-    rows <- 1e3
-    n_batches <- ceiling(length(regions) / rows)
+    n_batches <- ceiling(length(regions) / nrow)
     flog.info(sprintf(paste(
         "Creating %d batches with up to %d rows of windows each"),
-        n_batches, rows))
+        n_batches, nrow))
     obs <- list()
     completed <- 0
     t_elapsed <- 0
     i <- 0
-    iterator <- idiv(length(regions), chunkSize = rows)
+    iterator <- idiv(length(regions), chunkSize = nrow)
 
     while (TRUE) {
         i <- i + 1

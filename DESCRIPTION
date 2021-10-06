@@ -46,9 +46,11 @@ Imports:
     stats
 Suggests:
     BiocStyle,
+    MASS,
     UpSetR,
     covr,
     dplyr,
+    digest,
     ggplot2,
     knitr,
     purrr,

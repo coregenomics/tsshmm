@@ -4,17 +4,21 @@
 \name{TSSHMM-class}
 \alias{TSSHMM-class}
 \alias{TSSHMM}
+\alias{dim,TSSHMM-method}
 \alias{parameters}
 \alias{parameters,TSSHMM-method}
 \alias{parameters<-}
 \alias{parameters<-,TSSHMM-method}
 \alias{show,TSSHMM-method}
+\alias{create_batches}
 \alias{train}
-\alias{train,TSSHMM,GRanges,GRanges-method}
+\alias{train,TSSHMM,list-method}
 \alias{viterbi}
 \alias{viterbi,TSSHMM,GRanges,GRanges-method}
 \title{Transcription start site (TSS) hidden Markov model (HMM).}
 \usage{
+\S4method{dim}{TSSHMM}(x)
+
 parameters(model)
 
 \S4method{parameters}{TSSHMM}(model)
@@ -25,15 +29,19 @@ parameters(model) <- value
 
 \S4method{show}{TSSHMM}(object)
 
-train(model, signal, bg)
+create_batches(signal, bg, seed = 123, nrow = 1000)
 
-\S4method{train}{TSSHMM,GRanges,GRanges}(model, signal, bg)
+train(model, batches)
+
+\S4method{train}{TSSHMM,list}(model, batches)
 
 viterbi(model, signal, bg, ...)
 
 \S4method{viterbi}{TSSHMM,GRanges,GRanges}(model, signal, bg, tol = 0.001, n = 200)
 }
 \arguments{
+\item{x}{S4 object of a pre-designed hidden Markov model.}
+
 \item{model}{S4 object of a pre-designed hidden Markov model.}
 
 \item{value}{named list containing 2 model matrices: the transition state
@@ -45,6 +53,13 @@ probability matrix named "emis".}
 \item{signal}{Stranded, single base \code{GRanges} with integer score.}
 
 \item{bg}{Stranded, single base \code{GRanges} with integer score.}
+
+\item{seed}{Integer, seed used to shuffle the genome regions.}
+
+\item{nrow}{Integer, rows per batch.  Used for unit tests and not
+recommended to change because this value is optimal.}
+
+\item{batches}{list of integers of encoded windows.}
 
 \item{...}{Optional arguments passed on from generics to methods.}
 
@@ -122,6 +137,8 @@ of observations of the model.
 \section{Accessors}{
 
 
+\code{dim(x)} returns the number of states and emissions.
+
 \code{parameters(model)}, \code{parameters(model) <- list(trans = ..., emis = ...)}
 gets or sets 2 matrices: the transition state probability matrix, and the
 discrete observable emission probability matrix.
@@ -141,12 +158,22 @@ emissions.
 \section{Model Training}{
 
 
-updates <- train(model, signal, background)
+batches <- create_batches(signal, background)
+updates <- train(model, batches)
+
+\code{batches(signal, background)} returns a \code{list} of \code{IntegerList} encoded
+observation states for training.  The arguments, \code{signal} and \code{bg}, are
+stranded, single base \code{GRanges} with integer scores.
+
+The batch sizes are not configurable due to the limits of the maximum matrix
+size of the Baum-Welch training implementation, and minimum sequence count
+for training the >= 0.99 probability of the background hidden state.
 
 \code{train(model, signal, background)} returns a \code{DataFrame} of parameters after
-each update, and transforms the model in-place with trained transition and
-emission probabilities.  The arguments, \code{signal} and \code{bg}, are stranded,
-single base \code{GRanges} with integer scores.
+each update, and transforms the \code{model} argument in-place with trained
+transition and emission probabilities.  The argument, \code{batches} produced by
+the \code{create_batches()} function contains the encoded observation states
+chunked into the \code{list} of batches.
 
 After training, you may wish to save the parameters so that they can be
 reloaded in a later session as explained in the examples.
