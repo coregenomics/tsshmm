@@ -58,7 +58,9 @@ prom_dist <- function(model, tol = 1e-3, n = 200) {
         diffs_df[, col] <- c(y[[2]])
     }
     ## Locate worst case scenario.
-    diffs_df[, "max"] <- apply(diffs_df[, -2:-1], 1, max)
+    diffs_df[, "max"] <- apply(diffs_df[, -2:-1], 1,
+                               ## eigen() can yield complex numbers.
+                               function(x) max(sapply(x, Mod)))
     diffs <- aggregate(max ~ n, diffs_df, max, na.action = na.pass)$max
     ## Lowest index (number of windows) from tolerance.
     idx <- which(diffs < tol)
