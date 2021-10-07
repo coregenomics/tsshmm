@@ -166,7 +166,8 @@ model_tsshmm(ghmm_dmodel** model, int proseq)
     states[i].pi = 0.0;
     states[i].fix = 0;
   }
-  states[B].pi = 1.0;
+  states[N1].pi = 0.5;
+  states[P1].pi = 0.5;
 
   /* Other model settings. */
   (*model)->prior = -1;

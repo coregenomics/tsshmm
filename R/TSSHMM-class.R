@@ -379,18 +379,22 @@ setMethod(
             c(parameters(model)$trans[idx$trans],
               parameters(model)$emis[idx$emis])
 
+        t_elapsed <- 0
+        completed <- 0
+        chunks <- elementNROWS(batches)
         for (i in seq_along(batches)) {
-            ## Begin measure time used for generating this batch of training data.
+            ## Begin measure time used for generating this batch of training
+            ## data.
             t_start <- Sys.time()
-            gr <- regions[(completed+1):(completed+chunk)]
-            completed <- completed + chunk
+            completed <- completed + chunks[i]
             obs <- batches[[1]]
             flog.info(sprintf("%4d: Running Baum-Welch", i))
             converged <- NA
             .Call(C_train, PACKAGE = "tsshmm", converged,
                   model@external_pointer, unlist(obs, use.names = FALSE),
                   lengths(obs))
-            ## End measure time used for training the model on this batch of data.
+            ## End measure time used for training the model on this batch of
+            ## data.
             t_end <- Sys.time()
             t_diff <- difftime(t_end, t_start, units = "secs")
             t_elapsed <- t_elapsed + t_diff
@@ -407,7 +411,7 @@ setMethod(
             ## since beginning of training.
             elapsed_mins <- as.numeric(t_elapsed, units = "mins")
             rate_mins <- completed / elapsed_mins
-            remaining <- length(regions) - completed
+            remaining <- sum(chunks) - completed
             eta_mins <- remaining / rate_mins
             flog.info(sprintf(paste("%4d: This batch: %.0f secs",
                                     "Elapsed: %.1f mins",
@@ -417,7 +421,7 @@ setMethod(
                                     sep = ", "),
                               i, as.numeric(t_diff, units = "secs"),
                               elapsed_mins,
-                              completed, length(regions),
+                              completed, sum(chunks),
                               rate_mins,
                               eta_mins))
             updates[i+1, 1] <- sum(lengths(obs))

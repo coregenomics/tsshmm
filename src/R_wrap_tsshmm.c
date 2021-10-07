@@ -6,6 +6,7 @@
 #include "R_wrap_tsshmm.h"
 #include "models.h"
 #include "parameters.h"
+#include "simulate.h"
 #include "train.h"
 #include "tss.h"
 #include "viterbi.h"
@@ -119,6 +120,19 @@ C_train(SEXP converged, SEXP model, SEXP obs, SEXP lengths)
 	INTEGER(obs),
 	INTEGER(lengths),
 	LENGTH(lengths));
+  return R_NilValue;
+}
+
+/** Simulate data from a hidden Markov model.
+
+    @param obs Output encoded integer observations.
+    @param model HMM to simulate from.
+    @return The nil object
+*/
+SEXP
+C_simulate(SEXP obs, SEXP model)
+{
+  simulate(R_ExternalPtrAddr(model), INTEGER(obs), nrows(obs), ncols(obs));
   return R_NilValue;
 }
 

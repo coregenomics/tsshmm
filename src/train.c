@@ -67,5 +67,10 @@ train(int* converged, ghmm_dmodel* model, int* obs, int* lengths, int n)
      to complete a single pass of all the data instead of terminating
      prematurely. */
   *converged = ghmm_dmodel_baum_welch_nstep(model, seq, 1, 0);
+  /* Update initial states to normalized B->N1 and B-P1 transitions. */
+  enum { B, N1, P1 = 4 };
+  double sum = model->s[B].out_a[1] + model->s[B].out_a[2];
+  model->s[N1].pi = model->s[B].out_a[1] / sum;
+  model->s[P1].pi = model->s[B].out_a[2] / sum;
   sequence_free(&seq);
 }
