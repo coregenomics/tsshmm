@@ -16,7 +16,7 @@ GRangesList with 3 GRanges objects:
 GSE60453 and GSE60454
 }
 \usage{
-core2014
+data(core2014)
 }
 \description{
 Dataset of K562 cells from Core et al 2014.  The GRO-cap was differentially

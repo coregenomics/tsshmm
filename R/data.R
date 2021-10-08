@@ -11,4 +11,5 @@
 #' \item{GROseq:}{read counts, GRO-seq.}
 #' }
 #' @source GSE60453 and GSE60454
+#' @usage data(core2014)
 "core2014"
