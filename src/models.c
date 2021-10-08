@@ -88,7 +88,7 @@ model_tsshmm(ghmm_dmodel** model, int proseq)
     states[B].in_states = 4;
     states[B].in_a[1]  = 0.25;
     states[B].in_a[2]  = 0.125;
-    states[B].in_a[3]  = 1.0;
+    states[B].in_a[3]  = 0.01;
     states[B].in_id[3]  = GB;
   }
 
