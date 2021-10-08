@@ -83,6 +83,6 @@ use_data(core2014, overwrite = TRUE)
 
 ## Don't save full data under data/ because it slows down load time!
 save(core2014full,
-     file = proj_path("data-raw", "core2014full.rda"),
+     file = "core2014full.rda",
      compress = formals(use_data)$compress,
      version = formals(use_data)$version)
