@@ -34,7 +34,7 @@ biocViews:
     Annotation
 Depends:
     GenomicRanges,
-    R (>= 2.10)
+    R (>= 3.5.0)
 Imports:
     BiocGenerics,
     IRanges,
