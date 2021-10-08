@@ -390,9 +390,16 @@ setMethod(
             obs <- batches[[1]]
             flog.info(sprintf("%4d: Running Baum-Welch", i))
             converged <- NA
-            .Call(C_train, PACKAGE = "tsshmm", converged,
-                  model@external_pointer, unlist(obs, use.names = FALSE),
-                  lengths(obs))
+            ## Special case of small data.
+            if (length(batches) == 1) {
+                .Call(C_train_loop, PACKAGE = "tsshmm", converged,
+                      model@external_pointer, unlist(obs, use.names = FALSE),
+                      lengths(obs))
+            } else {
+                .Call(C_train, PACKAGE = "tsshmm", converged,
+                      model@external_pointer, unlist(obs, use.names = FALSE),
+                      lengths(obs))
+            }
             ## End measure time used for training the model on this batch of
             ## data.
             t_end <- Sys.time()

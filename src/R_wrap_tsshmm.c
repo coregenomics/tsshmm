@@ -101,7 +101,7 @@ C_model_tied_emis(SEXP tied_emis, SEXP model)
 }
 
 
-/** Run Baum-Welch training using streaming logic for large input data.
+/** Run Baum-Welch training for large input data.
 
     Run a single step of Buam-Welch training, because we cannot fit the entire
     training sequence from realistic data in RAM.
@@ -120,6 +120,28 @@ C_train(SEXP converged, SEXP model, SEXP obs, SEXP lengths)
 	INTEGER(obs),
 	INTEGER(lengths),
 	LENGTH(lengths));
+  return R_NilValue;
+}
+
+/** Run Baum-Welch training for small input data.
+
+    Run a single step of Buam-Welch training, because we cannot fit the entire
+    training sequence from realistic data in RAM.
+
+    @param converged Output of 0 if converged and -1 otherwise.
+    @param model HMM to train.
+    @param obs Encoded integer observations.
+    @param lengths Segmentation of observations to allow discontiguous training.
+    @return The nil object
+*/
+SEXP
+C_train_loop(SEXP converged, SEXP model, SEXP obs, SEXP lengths)
+{
+  train_loop(INTEGER(converged),
+	     R_ExternalPtrAddr(model),
+	     INTEGER(obs),
+	     INTEGER(lengths),
+	     LENGTH(lengths));
   return R_NilValue;
 }
 

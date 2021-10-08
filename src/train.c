@@ -46,7 +46,20 @@ sequence_free(ghmm_dseq **seq)
   Free(*seq);
 }
 
-/** Run Baum-Welch training using streaming logic for large input data.
+/** Update initial states to normalized B->N1 and B-P1 transitions.
+
+    @param model HMM being trained.
+ */
+void
+update_initial_states(ghmm_dmodel* model)
+{
+  enum { B, N1, P1 = 4 };
+  double sum = model->s[B].out_a[1] + model->s[B].out_a[2];
+  model->s[N1].pi = model->s[B].out_a[1] / sum;
+  model->s[P1].pi = model->s[B].out_a[2] / sum;
+}
+
+/** Run Baum-Welch training for large input data.
 
     Run a single step of Buam-Welch training, because we cannot fit the entire
     training sequence from realistic data in RAM.
@@ -60,17 +73,33 @@ sequence_free(ghmm_dseq **seq)
 void
 train(int* converged, ghmm_dmodel* model, int* obs, int* lengths, int n)
 {
-  /* Pad our */
   ghmm_dseq *seq = NULL;
   sequence_alloc(&seq, obs, lengths, n);
   /* Set the likelihood-delta to zero to ignore the likelihood-delta condition
      to complete a single pass of all the data instead of terminating
      prematurely. */
   *converged = ghmm_dmodel_baum_welch_nstep(model, seq, 1, 0);
-  /* Update initial states to normalized B->N1 and B-P1 transitions. */
-  enum { B, N1, P1 = 4 };
-  double sum = model->s[B].out_a[1] + model->s[B].out_a[2];
-  model->s[N1].pi = model->s[B].out_a[1] / sum;
-  model->s[P1].pi = model->s[B].out_a[2] / sum;
+  update_initial_states(model);
+  sequence_free(&seq);
+}
+
+/** Run Baum-Welch training for small input data.
+
+    Run Buam-Welch training until convergence, for a small training sequence
+    that can be entirely held in RAM.
+
+    @param converged Output of 0 if converged and -1 otherwise.
+    @param model HMM to train.
+    @param obs Encoded integer observations.
+    @param lengths Segmentation of observations to allow discontiguous training.
+    @param n Number of observation sequences.
+*/
+void
+train_loop(int* converged, ghmm_dmodel* model, int* obs, int* lengths, int n)
+{
+  ghmm_dseq *seq = NULL;
+  sequence_alloc(&seq, obs, lengths, n);
+  *converged = ghmm_dmodel_baum_welch(model, seq);
+  update_initial_states(model);
   sequence_free(&seq);
 }

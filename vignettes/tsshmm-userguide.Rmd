@@ -240,13 +240,9 @@ system.time(
 )
 
 ## Train the model 30 times to converge parameters on this small batch dataset.
-system.time({
+system.time(
     log_grocap <- train(model_grocap, batches_grocap)
-    for (i in  2:30) {
-        log <- train(model_grocap, batches_grocap)
-        log_grocap <- rbind(log_grocap, log[-1, ])
-    }
-})
+)
 
 ## See the trained model parameters.
 model_grocap
@@ -271,31 +267,63 @@ system.time(
     batches_groseq <- create_batches(signal, bg_groseq)
 )
 
-system.time({
+system.time(
     log_groseq <- train(model_groseq, batches_groseq)
-    for (i in  2:30) {
-        log <- train(model_groseq, batches_groseq)
-        log_groseq <- rbind(log_groseq, log[-1, ])
-    }
-})
+)
 
 model_groseq
 
 params_groseq <- parameters(model_groseq)
 ```
 
-## Visualization of parameters training and convergence
+## Big data training and visualization convergence
 
-If there are fewer than 1000 rows in total in the batch data, then `train()`
-uses a special case algorithm where it runs until convergence.  Such is the
-case with our subset example data.  However for a real world mammalian genome
-dataset, it's not possible to fit all the data at once into the model;
-therefore it becomes necessary to eyeball the training history to decide
-whether additional `train()` runs across the full dataset are necessary.  One
-can visualize the parameter updates as follows:
+If there is only one batch in the data, then `train()` uses a special case
+algorithm where it runs until convergence.  Such is the case with our subset
+example data.  However for a real world mammalian genome dataset, it's not
+possible to fit all the data at once into dense matrices for running the
+forward-backward algorithm; therefore it becomes necessary to eyeball the
+training history to decide whether additional `train()` runs across the full
+dataset are necessary.  One can log and visualize the parameter updates as
+follows:
 
-```{r Plot training parameters, dependson = paste0("Train GRO-", c("cap", "seq")), cache = params$cache, message = FALSE}
-library(dplyr)   # as_tibble, bind_rows, mutate, row_number, %>%
+```{r Big data training, dependson = "Inspect core2014 data", cache = params$cache}
+library(futile.logger) # flog.threshold, INFO, ERROR
+
+## Enable verbose progress from create_batches() and train() because they can
+## take a long time to run on on big data sets.
+flog.threshold(INFO)
+
+system.time(
+    ## Generate multiple batches by lowering the row cut-off to 150.
+    batches_big <- create_batches(signal, bg_grocap, nrow = 150)
+)
+
+batches_big
+
+model <- new("TSSHMM")
+system.time({
+    i <- 1
+    n_iter <- 4
+    message_iter <- function()
+        message(sprintf("*** Looping entire dataset [%d/%d]", i, n_iter))
+    message_iter()
+    log <- train(model, batches_big)
+    for (i in 2:n_iter) {
+        message_iter()
+        to_append <- train(model, batches_big)
+        ## The first row contains the pre-training parameters; remove it when
+        ## appending.
+        log <- rbind(log, to_append[-1, ])
+    }
+})
+
+## Silence progress messages.
+flog.threshold(ERROR)
+```
+
+```{r Plot training parameters, dependson = "Big data training", cache = params$cache, message = FALSE}
+library(dplyr)   # as_tibble, mutate, row_number, %>%
 library(tidyr)   # gather
 library(stringr) # str_length
 
@@ -308,9 +336,7 @@ df_long <- function(df, bg)
         mutate(type = ifelse(str_length(parameter) > 5,
                              "emission", "transition"))
 
-df <-
-    bind_rows("GRO-cap" = df_long(log_grocap),
-              "GRO-seq" = df_long(log_groseq), .id = "bg")
+df <- df_long(log)
 
 library(ggplot2)
 library(ggrepel) # geom_label_repel
@@ -320,19 +346,18 @@ ggplot(df, aes(samples, probability, color = parameter, group = parameter)) +
     geom_label_repel(data = dplyr::filter(df, i == ceiling(max(i) / 2)),
                      segment.color = NA,
                      aes(label = parameter)) +
-    facet_wrap(bg ~ type) +
+    facet_wrap(~ type) +
     guides(color = "none", label = "none") +
-    labs(title = paste("Model training after 30 iterations",
-                       "against different background data types"),
+    labs(title = paste("Model training after", n_iter, " iterations"),
          x = "Number of samples used for training",
          y = "Parameter probability value")
 ```
 
-As we can see, our parameters converge in 30 iterations on our chr22-
-subsampled data.  On the full dataset from\cite{core_analysis_2014},
-convergence happens within 2 iterations and of course is not less biased to the
-read distribution of the single chromosome because it shuffles the genome wide
-training data.
+The graph above that our parameters look like they are starting to converge
+after our insufficient `r n_iter` complete loops of our small subsampled data.
+Only 2 iterations are required for convergence on the full dataset of all
+chromosomes and strands from\cite{core_analysis_2014}.  Running against the
+full dataset using the steps above is explained in Appendix A.
 
 # Model parameters reuse
 
@@ -447,6 +472,64 @@ length(tss_grocap))` of the GRO-cap reference TSSs.
 \bibliography{refs}
 
 \appendix
+
+# Analyzing the full Core 2014 data set
+
+Standalone script to find promoters genome wide, and their transcription start
+sites:
+
+```{r Full data run, eval = FALSE}
+## Download the script used to generate the example data.
+url <- paste(c(repo = "https://gitlab.com/coregenomics/tsshmm",
+               sep = "-/raw/master",
+               path = "data-raw/core2014.R"), collapse = "/")
+file <- basename(url)
+download.file(url, file)
+
+## Run the script. You'll probably need to install missing packages.
+options(echo = TRUE)
+source(file)
+options(echo = FALSE)
+
+## Load the generated full data by the core2014.R script.
+load("core2014full.rda")
+signal <- core2014full[["GROcap_wTAP"]]
+bg <- core2014full[["GROcap_noTAP"]]
+
+library(tsshmm)
+flog.threshold(INFO)
+
+## Split core2014 into batches for training.
+system.time(
+    batches <- create_batches(signal, bg))
+
+## Create the model.
+model <- new("TSSHMM")
+
+## Train the model, iterating over full dataset a few times for parameter
+## convergence.
+system.time({
+    i <- 1
+    n_iter <- 3
+    message_iter <- function()
+        message(sprintf("*** Looping entire dataset [%d/%d]", i, n_iter))
+    message_iter()
+    log <- train(model, batches_big)
+    for (i in 2:n_iter) {
+        message_iter()
+        to_append <- train(model, batches_big)
+        log <- rbind(log, to_append[-1, ])
+    }
+})
+
+## Save parameters
+params_full <- parameters(model)
+save(params_full, "params.RData")
+
+## Calculate promoter regions and transcription start sites.
+prom_groseq <- granges(viterbi(model_groseq, signal, bg, tol = 1e-2))
+pairs <- tss(signal, prom, pairs = TRUE)
+```
 
 # Minimum distance between promoter regions
 
