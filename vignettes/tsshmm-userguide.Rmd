@@ -140,6 +140,11 @@ with the historical example data, we continue to name the older assays, and so
 if you are have data from the newer sequencing assays, you can substitute the
 newer PRO-* assay names in your mind when reading the variable names.
 
+Another notable promoter *de novo* discovery package is
+PINTS\cite{yao_systematic_2021}; however PINTS is a python package and uses
+different methods.  No similar other R or Bioconductor package interprets
+promoter regions of nascent RNA sequencing data.
+
 # Organizing the input data.
 
 The model requires signal and background reads to call promoter regions, and
@@ -479,12 +484,9 @@ Standalone script to find promoters genome wide, and their transcription start
 sites:
 
 ```{r Full data run, eval = FALSE}
-## Download the script used to generate the example data.
-url <- paste(c(repo = "https://gitlab.com/coregenomics/tsshmm",
-               sep = "-/raw/master",
-               path = "data-raw/core2014.R"), collapse = "/")
-file <- basename(url)
-download.file(url, file)
+## Path to the script used to generate the example data.
+file <- system.file("script", "core2014.R", package = "tsshmm",
+                    mustWork = TRUE)
 
 ## Run the script. You'll probably need to install missing packages.
 options(echo = TRUE)
@@ -731,7 +733,7 @@ between promoter regions before returning to the stationary distribution
 using a relaxed tolerance of 1E-3, and
 82 windows or 820 basepairs using a stricter tolerance of 1E-8.
 
-# Session info
+# Session information
 
 ```{r sessionInfo, echo = FALSE}
 knitr::raw_latex(toLatex(sessionInfo()))
