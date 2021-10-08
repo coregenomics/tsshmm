@@ -100,7 +100,7 @@ viterbi_by_strand <- function(model, signal, bg, ranges) {
     flog.debug("Running Viterbi")
     states <- viterbi_low_level(model, observations)
     flog.debug("Reducing discovered regions")
-    is_promoter <- states > 0 && states < 7
+    is_promoter <- states > 0 & states < 7
 
     gr <- unlist(windows)
     strand(gr) <- strand
