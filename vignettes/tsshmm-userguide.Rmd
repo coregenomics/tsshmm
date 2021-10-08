@@ -497,11 +497,15 @@ signal <- core2014full[["GROcap_wTAP"]]
 bg <- core2014full[["GROcap_noTAP"]]
 
 library(tsshmm)
+library(futile.logger)
 flog.threshold(INFO)
 
 ## Split core2014 into batches for training.
 system.time(
     batches <- create_batches(signal, bg))
+
+## Save training object.
+save(batches, file = "batches_grocap.RData")
 
 ## Create the model.
 model <- new("TSSHMM")
@@ -514,20 +518,21 @@ system.time({
     message_iter <- function()
         message(sprintf("*** Looping entire dataset [%d/%d]", i, n_iter))
     message_iter()
-    log <- train(model, batches_big)
+    log <- train(model, batches)
     for (i in 2:n_iter) {
         message_iter()
-        to_append <- train(model, batches_big)
+        to_append <- train(model, batches)
         log <- rbind(log, to_append[-1, ])
     }
 })
 
-## Save parameters
-params_full <- parameters(model)
-save(params_full, "params.RData")
+## Save training objects.
+params <- parameters(model)
+save(params, file = "params_grocap.RData")
+save(log, file = "log_grocap.RData")
 
 ## Calculate promoter regions and transcription start sites.
-prom_groseq <- granges(viterbi(model_groseq, signal, bg, tol = 1e-2))
+prom <- granges(viterbi(model, signal, bg, tol = 1e-2))
 pairs <- tss(signal, prom, pairs = TRUE)
 ```
 
