@@ -5,6 +5,12 @@ data-raw/core2014full.rda
 inst/doc
 *.RData
 
+# vignette
+vignettes/*.log
+vignettes/*.pdf
+vignettes/*_cache/
+vignettes/*_files/
+
 # autoconf
 autom4te.cache/
 config.log

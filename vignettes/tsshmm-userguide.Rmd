@@ -5,8 +5,11 @@ author:
   affiliation: University of Connecticut
   email: pariksheet.nanda@uconn.edu
 abstract: |
-  Viterbi decoding of gene promoter regions and TSS sites from nuclear
-  run-on and sequencing data.
+  De novo discovery of gene promoter regions and transcription start sites
+  (TSSs) from nuclear run-on and sequencing data.  Implements the hidden Markov
+  model and TSS peak finder from Core 2014, and optionally extends the model to
+  use standard PRO-seq data for the background reference instead of needing to
+  collect a bespoke PRO-cap background reference.
 package: tsshmm
 output:
   BiocStyle::pdf_document: default
@@ -17,9 +20,11 @@ vignette: >
   %\VignetteIndexEntry{tsshmm-userguide}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+params:
+  cache: TRUE
 ---
 
-```{r, include = FALSE}
+```{r Setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -28,17 +33,18 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-This package implements the TSS discovery model\cite{core_analysis_2014}
-illustrated in Figure \ref{fig:hmm}.
-
-A minor correction of the original model applied in this implementation
-is to treat initial states as equally likely; the original model
-treated the initial state as always being background, which
-can miss the starting 10 bp window in a region
-and even result in incorrect discontiguous calls.
+The sparse reads from nascent RNA sequencing assays need to be smoothed to
+ascribe regions of active transcription.  Traditionally, this smoothing is done
+using hidden Markov models.  This package implements the published hidden
+Markov model\cite{core_analysis_2014} illustrated in the top half of Figure
+\ref{fig:hmm}, as well as a novel variant of the model with an additional gene
+body (G) state to negate collecting the assay-specific background reference.
 
 \begin{smallfigure}
-  \begin{tikzpicture}[state/.style={draw,circle,minimum size=1cm}]
+  \begin{tikzpicture}[
+  state/.style={draw,circle,minimum size=1cm},
+  dup/.style={black!20,draw,circle,minimum size=1cm}
+  ]
     % States
     \node [state] (b) {B};
     \node [state,label=Non-peaked TSS,left=of b] (n1) {N1};
@@ -47,6 +53,18 @@ and even result in incorrect discontiguous calls.
     \node [state,below=of p1] (p2) {P2};
     \node [state,below=of n2] (n3) {N3};
     \node [state,below=of p2] (p3) {P3};
+
+	% States - additional
+    \node [dup,below=of n3]     (n1-dup) {N1};
+    \node [dup,below=of n1-dup] (n2-dup) {N2};
+    \node [dup,below=of n2-dup] (n3-dup) {N3};
+    \node [dup,right=of n1-dup] (b-dup)  {B};
+    \node [dup,right=of b-dup]  (p1-dup) {P1};
+    \node [dup,below=of p1-dup] (p2-dup) {P2};
+    \node [dup,below=of p2-dup] (p3-dup) {P3};
+
+	% State - new
+    \node [state,right=of n3-dup] (g) {G};
 
     % Connections
     \draw[->]  (b) edge [loop above] node {0.99} (b);
@@ -66,6 +84,32 @@ and even result in incorrect discontiguous calls.
 
     \draw[->] (n3) -- node [near start,right] {1}   (b);
     \draw[->] (p3) -- node [near start,left]  {0.5} (b);
+
+	% Connections - additional
+    \draw[black!20,->]  (b-dup) edge [loop above] node {0.99} (b-dup);
+    \draw[black!20,->]  (b-dup) -- node [below] {0.005} (n1-dup);
+    \draw[black!20,->]  (b-dup) -- node [below] {0.005} (p1-dup);
+
+    \draw[black!20,->] (n1-dup) -- node [left] {1}   (n2-dup);
+    \draw[black!20,->] (n2-dup) -- node [left] {0.5} (n3-dup);
+    \draw[black!20,->] (n2-dup) edge [loop left] node {0.5} (n2-dup);
+
+    \draw[black!20,->] (p1-dup) -- node [right] {0.5} (p2-dup);
+    \draw[black!20,->] (p1-dup) edge [loop right] node {0.5} (p1-dup);
+    \draw[black!20,->] (p2-dup) -- node [right] {0.45} (p3-dup);
+    \draw[black!20,->] (p2-dup) edge [bend left] node [left] {0.45} (p1-dup);
+    \draw[black!20,->] (p2-dup) edge [loop right] node {0.1} (p2-dup);
+    \draw[black!20,->] (p3-dup) edge [loop right] node {0.5} (p3-dup);
+
+    \draw[black!20,->] (n3-dup) -- node [near start,text=black,right] {0.25}  (b-dup);
+    \draw[black!20,->] (p3-dup) -- node [near start,text=black,left]  {0.125} (b-dup);
+
+	% Connections - new
+    \draw[->] (n3-dup) -- node [below] {0.75}  (g);
+    \draw[->] (p3-dup) -- node [below] {0.375} (g);
+    \draw[->] (g) -- node [right] {0.01} (b-dup);
+    \draw[->] (g) edge [loop below] node {0.99} (g);
+
   \end{tikzpicture}
   \caption{\label{fig:hmm}TSS HMM for detecting enhancer transcripts.  Adapted
     from~\cite[supplementary figure 2]{core_analysis_2014}.  HMM to find
@@ -82,31 +126,180 @@ and even result in incorrect discontiguous calls.
     a short intense center.}
 \end{smallfigure}
 
-# Model training
+The published model name "TSS" HMM is a misnomer.  Strictly speaking, it would
+have been more accurate to call the model "Promoter" HMM, because the model
+itself does not find single-base transcription start sites (TSSs) for you; the
+model only segments promoter regions which can then be searched for TSS peaks.
+Nevertheless, we use the TSS HMM name to remain consistent with the
+publication\cite{core_analysis_2014}.
 
-```{r Inspect core 2014 data}
+Although the historical data used in the vignette is from the older GRO-cap and
+GRO-seq assays, the same data processing in this package applies to their newer
+variants, the PRO-cap and PRO-seq assays, respectively.  To remain consistent
+with the historical example data, we continue to name the older assays, and so
+if you are have data from the newer sequencing assays, you can substitute the
+newer PRO-* assay names in your mind when reading the variable names.
+
+# Organizing the input data.
+
+The model requires signal and background reads to call promoter regions, and
+only signal reads to call TSS locations.  The reads must be the coverage or
+histogram of mapped nascent RNA sequencing data of the biologically significant
+end of the read: for PRO-cap the biologically significant end is the 5' end,
+and in PRO-seq it is the 3' end.  Therefore, no extra data processing is
+required; if the data has been visualized in a genome browser as a bigWig or
+bedGraph file, simply import the data using the `rtracklayer` package,
+concatenate the plus and minus strand reads into a single `GRanges` object, and
+take the absolute value of the `score` metadata column so that all coverage
+bases are assigned positive integers for their read count.
+
+An example script to data tracks is shown below which assumes you have the
+typical read coverage files used for visualization in a genome browser:
+
+```{r Import data, eval = FALSE}
+## *** Ignore this code block if you're only following along with the tutorial.
+
+library(rtracklayer) # import
+
+import_tracks <- function(file_plus, file_minus) {
+    signal_plus <- import(file_plus)
+    signal_minus <- import(file_minus)
+    ## Browser negative strand tracks often have negative scores.
+    score(signal_minus) <- abs(score(signal_minus))
+    signal <- sort(c(signal_plus, signal_minus))
+}
+
+## Read in signal and background from pretend datasets.  Any read coverage file
+## like bedgraphs or bigwigs work as is.
+signal <- import_tracks("procap_plus.bedgraph.gz",
+                        "procap_minus.bedgraph.gz")
+bg <- import_tracks("proseq_plus.bw",
+                    "proseq_minus.bw")
+```
+
+We will use K562 cell nascent RNA sequencing data subset to hg19 chr22- to
+demonstrate model training and evaluation.  The full R script used to generate
+this subset `GRangesList` dataset is included with this package along with the
+source code in `./data-raw/core2014.R`. Instead of using the wordy assay and
+treatment names from the publication packaged `core2014` data, let's alias 3
+convenience `GRanges` objects named by our model's intended use:
+
+```{r Load tsshmm library}
+library(tsshmm)
+```
+
+```{r Inspect core2014 data, cache = params$cache, message = FALSE}
 data(core2014)
+signal <- core2014[["GROcap_wTAP"]]
+bg_grocap <- core2014[["GROcap_noTAP"]]
+bg_groseq <- core2014[["GROseq"]]
 core2014
 ```
 
-```{r Train GRO-cap}
-(model_grocap <- new("TSSHMM"))
-signal <- core2014[["GROcap_wTAP"]]
-bg <- core2014[["GROcap_noTAP"]]
-batches_grocap <- create_batches(signal, bg)
+Peaking at the assay data above, we see more read locations from GRO-seq assay,
+because it captures polymerases molecules at locations beyond the promoter.
+We're looking at coverage data, so don't mistake the lengths as representing
+the reads; they represent the bases at which one or more reads are present.  To
+count the number of reads, you need to sum the scores:
 
+```{r Read counts, dependson = "Inspect core2014 data", cache = params$cache}
+## Number of GRO-cap reads.
+sum(score(signal))
+## Number of GRO-seq reads
+sum(score(bg_groseq))
+```
+
+So there are actually more GRO-cap reads on the negative strand of chromosome
+22 even though those reads are present at fewer locations than the GRO-seq
+data.
+
+# Model training
+
+## GRO-cap background
+
+Training the model consists of 3 steps:
+
+1. Create the model object with the initial parameters shown in Figure
+   \ref{fig:hmm} using `new("TSSHMM")`,
+2. Encode the read coverage counts into the 3 categories of discrete emissions
+   observed --- no signal, enriched, and depleted --- using `create_batches()`,
+   and then
+3. Feeding the batches into the model for training using `train()`.  Because
+   our subsampled dataset has only a small amount of data for the number of
+   parameters to train, we loop the `train()` function 30 times for the
+   parameters to converge and collect the `DataFrame` of the parameter changes
+   to visualize in a later section.
+
+```{r Train GRO-cap, dependson = "Inspect core2014 data", cache = params$cache}
+## Initialize the model.
+(model_grocap <- new("TSSHMM"))
+
+## Encode the signal and background into batches that the model can understand.
+system.time(
+    batches_grocap <- create_batches(signal, bg_grocap)
+)
+
+## Train the model 30 times to converge parameters on this small batch dataset.
 system.time({
     log_grocap <- train(model_grocap, batches_grocap)
-    for (i in  2:20) {
+    for (i in  2:30) {
         log <- train(model_grocap, batches_grocap)
         log_grocap <- rbind(log_grocap, log[-1, ])
     }
 })
 
-library(ggplot2)
-library(dplyr)
+## See the trained model parameters.
+model_grocap
 
-df_long <- function(df)
+## Save the parameters so the trained model can recreated later.
+params_grocap <- parameters(model_grocap)
+```
+
+## GRO-seq background
+
+Duplicate the steps from the above GRO-cap section with 2 changes:
+
+1. Pass the argument `bg_proseq = TRUE` when initializing the model to add the
+   extra gene body (G) state and emission to the parameter matrices, and
+2. Use the GRO-seq data stored in `bg_groseq` instead of `bg_grocap` to
+   generate the randomized training batches.
+
+```{r Train GRO-seq, dependson = "Inspect core2014 data", cache = params$cache}
+(model_groseq <- new("TSSHMM", bg_proseq = TRUE))
+
+system.time(
+    batches_groseq <- create_batches(signal, bg_groseq)
+)
+
+system.time({
+    log_groseq <- train(model_groseq, batches_groseq)
+    for (i in  2:30) {
+        log <- train(model_groseq, batches_groseq)
+        log_groseq <- rbind(log_groseq, log[-1, ])
+    }
+})
+
+model_groseq
+
+params_groseq <- parameters(model_groseq)
+```
+
+## Visualization of parameters training and convergence
+
+If there are fewer than 1000 rows in total in the batch data, then `train()`
+uses a special case algorithm where it runs until convergence.  Such is the
+case with our subset example data.  However for a real world mammalian genome
+dataset, it's not possible to fit all the data at once into the model;
+therefore it becomes necessary to eyeball the training history to decide
+whether additional `train()` runs across the full dataset are necessary.  One
+can visualize the parameter updates as follows:
+
+```{r Plot training parameters, dependson = paste0("Train GRO-", c("cap", "seq")), cache = params$cache, message = FALSE}
+library(dplyr)   # as_tibble, bind_rows, mutate, row_number, %>%
+library(tidyr)   # gather
+library(stringr) # str_length
+
+df_long <- function(df, bg)
     df %>%
         as_tibble() %>%
         mutate(i = row_number() - 1,
@@ -115,64 +308,141 @@ df_long <- function(df)
         mutate(type = ifelse(str_length(parameter) > 5,
                              "emission", "transition"))
 
-plot_params <- function(df)
-    ggplot(df, aes(samples, probability, color = parameter, group = parameter)) +
-        geom_line() +
-        geom_label(data = dplyr::filter(df, i == ceiling(max(i) / 2)),
-                   aes(label = parameter)) +
-        facet_wrap(~ type) +
-        guides(color = "none", label = "none")
+df <-
+    bind_rows("GRO-cap" = df_long(log_grocap),
+              "GRO-seq" = df_long(log_groseq), .id = "bg")
 
-plot_params(df_long(log_grocap))
+library(ggplot2)
+library(ggrepel) # geom_label_repel
+
+ggplot(df, aes(samples, probability, color = parameter, group = parameter)) +
+    geom_line() +
+    geom_label_repel(data = dplyr::filter(df, i == ceiling(max(i) / 2)),
+                     segment.color = NA,
+                     aes(label = parameter)) +
+    facet_wrap(bg ~ type) +
+    guides(color = "none", label = "none") +
+    labs(title = paste("Model training after 30 iterations",
+                       "against different background data types"),
+         x = "Number of samples used for training",
+         y = "Parameter probability value")
 ```
 
-```{r Train GRO-seq}
+As we can see, our parameters converge in 30 iterations on our chr22-
+subsampled data.  On the full dataset from\cite{core_analysis_2014},
+convergence happens within 2 iterations and of course is not less biased to the
+read distribution of the single chromosome because it shuffles the genome wide
+training data.
+
+# Model parameters reuse
+
+Training on the full dataset of\cite{core_analysis_2014} takes about an hour.
+Therefore it makes sense to save the trained parameters to disk to reuse:
+
+```{r Save and load model parameters, eval = FALSE}
+## *** Ignore this code block if you're only following along with the tutorial.
+
+## Save parameters for future use:
+save(params_grocap, params_groseq, file = "tsshmm-params.RData")
+
+## In a future R session:
+load(file = "tsshmm-params.RData")
+```
+
+```{r Reinitialize models, dependson = paste0("Train GRO-", c("cap", "seq")), cache = params$cache}
+## *** Ignore this code block if you're only following along with the tutorial.
+
+## Reinitialize PRO-cap background model:
+model_grocap <- new("TSSHMM")
+parameters(model_grocap) <- params_grocap
+
 model_groseq <- new("TSSHMM", bg_proseq = TRUE)
-
-signal <- core2014[["GROcap_wTAP"]]
-bg <- core2014[["GROseq"]]
-batches_groseq <- create_batches(signal, bg)
-
-system.time({
-    log_groseq <- train(model_groseq, batches_groseq)
-    for (i in  2:20) {
-        log <- train(model_groseq, batches_groseq)
-        log_groseq <- rbind(log_groseq, log[-1, ])
-    }
-})
-
-plot_params(df_long(log_groseq))
+parameters(model_groseq) <- params_groseq
 ```
 
 # Model inference
 
-```{r Find promoters}
-signal <- core2014[["GROcap_wTAP"]]
-bg <- core2014[["GROcap_noTAP"]]
-prom_grocap <- granges(viterbi(model_grocap, signal, bg, tol = 1e-2))
+Now that the models have been fully trained on the data, we can use the models
+to find promoter regions and each TSS within the promoter.
+
+Of course, it is possible to use to detect clusters of TSSs within a single
+promoter region.  However the `tss()` function does not check for this.  More
+careful approaches like inter-quartile range methods are useful may be useful
+for detecting alternative TSSs.
+
+Additionally, below we directly search for TSSs within the putative promoter
+regions.  But in actual practise, before running the `tss()` function, you may
+wish to tweak the `prom_*` regions.  For example, if you're only interested in
+enhancers, you may wish to remove annotated genes from the dataset, or overlap
+the putative tracks with epigenetic tracks.
+
+```{r Detect promoters then search for TSSs within promoters, dependson = paste0("Train GRO-", c("cap", "seq")), cache = params$cache}
+model_grocap <- new("TSSHMM")
+parameters(model_grocap) <- params_grocap
+prom_grocap <- granges(viterbi(model_grocap, signal, bg_grocap, tol = 1e-2))
 tss_grocap <- tss(signal, prom_grocap)
 
-signal <- core2014[["GROcap_wTAP"]]
-bg <- core2014[["GROseq"]]
-prom_groseq <- granges(viterbi(model_groseq, signal, bg, tol = 1e-2))
+model_groseq <- new("TSSHMM", bg_proseq = TRUE)
+parameters(model_groseq) <- params_groseq
+prom_groseq <- granges(viterbi(model_groseq, signal, bg_groseq, tol = 1e-2))
 tss_groseq <- tss(signal, prom_groseq)
 ```
 
-# Model comparison
+An often useful optional parameter to `tss()` is returning a `Pairs` object
+instead of `GRanges`.  The advantage of the `Pairs` object is that one can
+filter on characteristics of the promoter region and then look at the
+corresponding TSS locations and completely avoid the complexity of duplicating
+operations on both the `prom_*` and `tss_*` objects:
 
-```{r Compare model outputs}
-ol <- findOverlaps(tss_grocap, tss_groseq)
+```{r TSS pairs, dependson = "Detect promoters then search for TSSs within promoters", cache = params$cache}
+(pairs <- tss(signal, prom_grocap, pairs = TRUE))
+
+## Access the TSS and promoters using first() and second() respectively.  Note
+## that dplyr::first conflicts with S4Vectors::first, therefore we need to
+## explicitly use the latter.
+S4Vectors::first(pairs)
+second(pairs)
+
+## Subset for long promoter regions and get their TSSs.
+(quantile <- quantile(width(second(pairs)), seq(0, 1, 0.05)))
+pairs[width(second(pairs)) > quantile["80%"]]
+## Also remove weak single count TSS peaks.
+(pairs_long <- pairs[width(second(pairs)) > quantile["80%"] &
+                     score(S4Vectors::first(pairs)) >= 2])
+S4Vectors::first(pairs_long)
+```
+
+The reason that this useful `Pairs` object is not returned by default, is that
+it might be confusing to the typical Bioconductor user who is familiar with
+working with `GRanges` and not familiar with `Pairs`.  Perhaps you'll enjoy
+working with `Pairs` objects of promoters and their TSSs from now on having
+seen the utility of `Pairs` here!
+
+# Comparison of TSS calls
+
+Now that we've found the promoter regions and TSSs within each of those
+promoters using both types of background data, how differet are the TSS class
+within those background datasets?
+
+```{r Compare TSS locations from using different backgrounds, dependson = "Detect promoters then search for TSSs within promoters", cache = params$cache}
+(ol <- findOverlaps(tss_grocap, tss_groseq))
+length(ol)
+length(tss_grocap)
+length(tss_groseq)
 
 library(UpSetR)
 
-x <-
+upset(
     fromExpression(
-        c(grocap = length(tss_grocap),
-          groseq  = length(tss_groseq),
-          `grocap&groseq` = length(ol)))
-
-upset(x, order.by = "freq")
+        c(grocap = length(tss_grocap) - length(ol),
+          groseq  = length(tss_groseq) - length(ol),
+          `grocap&groseq` = length(ol))),
+    order.by = "freq")
 ```
+
+Therefore, using the more plentiful and convenient GRO-seq background reference
+was still able to find `r sprintf("%.0f%%", 100 * length(ol) /
+length(tss_grocap))` of the GRO-cap reference TSSs.
 
 \bibliography{refs}
 
