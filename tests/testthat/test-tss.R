@@ -125,6 +125,6 @@ test_that("tss optionally returns Pairs with query range", {
     pairs <- tss(signal, gr, pairs = TRUE)
     expect_type(pairs, "S4")
     expect_s4_class(pairs, "Pairs")
-    expect_equal(first(pairs), tss)
+    expect_equal(S4Vectors::first(pairs), tss)
     expect_equal(second(pairs), `strand<-`(ranges, value = "+"))
 })
