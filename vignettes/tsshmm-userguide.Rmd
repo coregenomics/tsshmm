@@ -33,6 +33,8 @@ knitr::opts_chunk$set(
 
 # Introduction
 
+## Model
+
 The sparse reads from nascent RNA sequencing assays need to be smoothed to
 ascribe regions of active transcription.  Traditionally, this smoothing is done
 using hidden Markov models.  This package implements the published hidden
@@ -133,6 +135,8 @@ model only segments promoter regions which can then be searched for TSS peaks.
 Nevertheless, we use the TSS HMM name to remain consistent with the
 publication\cite{core_analysis_2014}.
 
+## Older and newer assay names
+
 Although the historical data used in the vignette is from the older GRO-cap and
 GRO-seq assays, the same data processing in this package applies to their newer
 variants, the PRO-cap and PRO-seq assays, respectively.  To remain consistent
@@ -140,12 +144,16 @@ with the historical example data, we continue to name the older assays, and so
 if you are have data from the newer sequencing assays, you can substitute the
 newer PRO-* assay names in your mind when reading the variable names.
 
+## Prior art
+
 Another notable promoter *de novo* discovery package is
 PINTS\cite{yao_systematic_2021}; however PINTS is a python package and uses
-different methods.  No similar other R or Bioconductor package interprets
-promoter regions of nascent RNA sequencing data.
+different methods.  No other Bioconductor or CRAN package interprets promoter
+regions from nascent RNA sequencing data.
 
-# Organizing the input data.
+# Organizing the input data
+
+## Reading in converage histogram files
 
 The model requires signal and background reads to call promoter regions, and
 only signal reads to call TSS locations.  The reads must be the coverage or
@@ -182,6 +190,8 @@ bg <- import_tracks("proseq_plus.bw",
                     "proseq_minus.bw")
 ```
 
+## Using chr22- subset data from Core 2014
+
 We will use K562 cell nascent RNA sequencing data subset to hg19 chr22- to
 demonstrate model training and evaluation.  The full R script used to generate
 this subset `GRangesList` dataset is included with this package along with the
@@ -191,6 +201,11 @@ convenience `GRanges` objects named by our model's intended use:
 
 ```{r Load tsshmm library}
 library(tsshmm)
+library(futile.logger) # flog.threshold, DEBUG, INFO, ERROR
+
+## Enable verbose progress from encode_obs() and train() because they can
+## take a long time to run on on big data sets.
+flog.threshold(DEBUG)
 ```
 
 ```{r Inspect core2014 data, cache = params$cache, message = FALSE}
@@ -218,6 +233,32 @@ So there are actually more GRO-cap reads on the negative strand of chromosome
 22 even though those reads are present at fewer locations than the GRO-seq
 data.
 
+Running against the full dataset using the steps above is explained below:
+
+## Using the full data set from Core 2014
+
+To run the model on the full dataset instead of the subset chr22-, generate the
+`core2014full` `GRangesList` object with the bundled script:
+
+```{r Full data run, eval = FALSE}
+## *** Ignore this code block if you're only following along with the tutorial.
+
+## Path to the script used to generate the example data.
+file <- system.file("script", "core2014.R", package = "tsshmm",
+                    mustWork = TRUE)
+
+## Run the script. You'll probably need to install missing packages.
+options(echo = TRUE)
+source(file)
+options(echo = FALSE)
+
+## Load the generated full data by the core2014.R script.
+load("core2014full.rda")
+signal <- core2014full[["GROcap_wTAP"]]
+bg_grocap <- core2014full[["GROcap_noTAP"]]
+bg_groseq <- core2014full[["GROseq"]]
+```
+
 # Model training
 
 ## GRO-cap background
@@ -227,26 +268,23 @@ Training the model consists of 3 steps:
 1. Create the model object with the initial parameters shown in Figure
    \ref{fig:hmm} using `new("TSSHMM")`,
 2. Encode the read coverage counts into the 3 categories of discrete emissions
-   observed --- no signal, enriched, and depleted --- using `create_batches()`,
+   observed --- no signal, enriched, and depleted --- using `encode_obs()`,
    and then
-3. Feeding the batches into the model for training using `train()`.  Because
-   our subsampled dataset has only a small amount of data for the number of
-   parameters to train, we loop the `train()` function 30 times for the
-   parameters to converge and collect the `DataFrame` of the parameter changes
-   to visualize in a later section.
+3. Feeding the obs into the model for training using `train()`, and collect the
+   collect the `DataFrame` of the parameter changes.
 
 ```{r Train GRO-cap, dependson = "Inspect core2014 data", cache = params$cache}
 ## Initialize the model.
 (model_grocap <- new("TSSHMM"))
 
-## Encode the signal and background into batches that the model can understand.
+## Encode the signal and background into obs that the model can understand.
 system.time(
-    batches_grocap <- create_batches(signal, bg_grocap)
+    obs_grocap <- encode_obs(signal, bg_grocap)
 )
 
-## Train the model 30 times to converge parameters on this small batch dataset.
+## Train the model 30 times to converge parameters for these few observations.
 system.time(
-    log_grocap <- train(model_grocap, batches_grocap)
+    log_grocap <- train(model_grocap, obs_grocap)
 )
 
 ## See the trained model parameters.
@@ -263,106 +301,23 @@ Duplicate the steps from the above GRO-cap section with 2 changes:
 1. Pass the argument `bg_proseq = TRUE` when initializing the model to add the
    extra gene body (G) state and emission to the parameter matrices, and
 2. Use the GRO-seq data stored in `bg_groseq` instead of `bg_grocap` to
-   generate the randomized training batches.
+   generate the randomized training observations.
 
 ```{r Train GRO-seq, dependson = "Inspect core2014 data", cache = params$cache}
 (model_groseq <- new("TSSHMM", bg_proseq = TRUE))
 
 system.time(
-    batches_groseq <- create_batches(signal, bg_groseq)
+    obs_groseq <- encode_obs(signal, bg_groseq)
 )
 
 system.time(
-    log_groseq <- train(model_groseq, batches_groseq)
+    log_groseq <- train(model_groseq, obs_groseq)
 )
 
 model_groseq
 
 params_groseq <- parameters(model_groseq)
 ```
-
-## Big data training and visualization convergence
-
-If there is only one batch in the data, then `train()` uses a special case
-algorithm where it runs until convergence.  Such is the case with our subset
-example data.  However for a real world mammalian genome dataset, it's not
-possible to fit all the data at once into dense matrices for running the
-forward-backward algorithm; therefore it becomes necessary to eyeball the
-training history to decide whether additional `train()` runs across the full
-dataset are necessary.  One can log and visualize the parameter updates as
-follows:
-
-```{r Big data training, dependson = "Inspect core2014 data", cache = params$cache}
-library(futile.logger) # flog.threshold, INFO, ERROR
-
-## Enable verbose progress from create_batches() and train() because they can
-## take a long time to run on on big data sets.
-flog.threshold(INFO)
-
-system.time(
-    ## Generate multiple batches by lowering the row cut-off to 150.
-    batches_big <- create_batches(signal, bg_grocap, nrow = 150)
-)
-
-batches_big
-
-model <- new("TSSHMM")
-system.time({
-    i <- 1
-    n_iter <- 4
-    message_iter <- function()
-        message(sprintf("*** Looping entire dataset [%d/%d]", i, n_iter))
-    message_iter()
-    log <- train(model, batches_big)
-    for (i in 2:n_iter) {
-        message_iter()
-        to_append <- train(model, batches_big)
-        ## The first row contains the pre-training parameters; remove it when
-        ## appending.
-        log <- rbind(log, to_append[-1, ])
-    }
-})
-
-## Silence progress messages.
-flog.threshold(ERROR)
-```
-
-```{r Plot training parameters, dependson = "Big data training", cache = params$cache, message = FALSE}
-library(dplyr)   # as_tibble, mutate, row_number, %>%
-library(tidyr)   # gather
-library(stringr) # str_length
-
-df_long <- function(df, bg)
-    df %>%
-        as_tibble() %>%
-        mutate(i = row_number() - 1,
-               samples = cumsum(samples)) %>%
-        gather(key = "parameter", value = "probability", -i, -samples) %>%
-        mutate(type = ifelse(str_length(parameter) > 5,
-                             "emission", "transition"))
-
-df <- df_long(log)
-
-library(ggplot2)
-library(ggrepel) # geom_label_repel
-
-ggplot(df, aes(samples, probability, color = parameter, group = parameter)) +
-    geom_line() +
-    geom_label_repel(data = dplyr::filter(df, i == ceiling(max(i) / 2)),
-                     segment.color = NA,
-                     aes(label = parameter)) +
-    facet_wrap(~ type) +
-    guides(color = "none", label = "none") +
-    labs(title = paste("Model training after", n_iter, " iterations"),
-         x = "Number of samples used for training",
-         y = "Parameter probability value")
-```
-
-The graph above that our parameters look like they are starting to converge
-after our insufficient `r n_iter` complete loops of our small subsampled data.
-Only 2 iterations are required for convergence on the full dataset of all
-chromosomes and strands from\cite{core_analysis_2014}.  Running against the
-full dataset using the steps above is explained in Appendix A.
 
 # Model parameters reuse
 
@@ -425,6 +380,9 @@ corresponding TSS locations and completely avoid the complexity of duplicating
 operations on both the `prom_*` and `tss_*` objects:
 
 ```{r TSS pairs, dependson = "Detect promoters then search for TSSs within promoters", cache = params$cache}
+## Silence progress messages.
+flog.threshold(ERROR)
+
 (pairs <- tss(signal, prom_grocap, pairs = TRUE))
 
 ## Access the TSS and promoters using first() and second() respectively.  Note
@@ -477,66 +435,6 @@ length(tss_grocap))` of the GRO-cap reference TSSs.
 \bibliography{refs}
 
 \appendix
-
-# Analyzing the full Core 2014 data set
-
-Standalone script to find promoters genome wide, and their transcription start
-sites:
-
-```{r Full data run, eval = FALSE}
-## Path to the script used to generate the example data.
-file <- system.file("script", "core2014.R", package = "tsshmm",
-                    mustWork = TRUE)
-
-## Run the script. You'll probably need to install missing packages.
-options(echo = TRUE)
-source(file)
-options(echo = FALSE)
-
-## Load the generated full data by the core2014.R script.
-load("core2014full.rda")
-signal <- core2014full[["GROcap_wTAP"]]
-bg <- core2014full[["GROcap_noTAP"]]
-
-library(tsshmm)
-library(futile.logger)
-flog.threshold(INFO)
-
-## Split core2014 into batches for training.
-system.time(
-    batches <- create_batches(signal, bg))
-
-## Save training object.
-save(batches, file = "batches_grocap.RData")
-
-## Create the model.
-model <- new("TSSHMM")
-
-## Train the model, iterating over full dataset a few times for parameter
-## convergence.
-system.time({
-    i <- 1
-    n_iter <- 3
-    message_iter <- function()
-        message(sprintf("*** Looping entire dataset [%d/%d]", i, n_iter))
-    message_iter()
-    log <- train(model, batches)
-    for (i in 2:n_iter) {
-        message_iter()
-        to_append <- train(model, batches)
-        log <- rbind(log, to_append[-1, ])
-    }
-})
-
-## Save training objects.
-params <- parameters(model)
-save(params, file = "params_grocap.RData")
-save(log, file = "log_grocap.RData")
-
-## Calculate promoter regions and transcription start sites.
-prom <- granges(viterbi(model, signal, bg, tol = 1e-2))
-pairs <- tss(signal, prom, pairs = TRUE)
-```
 
 # Minimum distance between promoter regions
 

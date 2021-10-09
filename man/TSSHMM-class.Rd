@@ -10,9 +10,9 @@
 \alias{parameters<-}
 \alias{parameters<-,TSSHMM-method}
 \alias{show,TSSHMM-method}
-\alias{create_batches}
+\alias{encode_obs}
 \alias{train}
-\alias{train,TSSHMM,list-method}
+\alias{train,TSSHMM,IntegerList-method}
 \alias{viterbi}
 \alias{viterbi,TSSHMM,GRanges,GRanges-method}
 \title{Transcription start site (TSS) hidden Markov model (HMM).}
@@ -29,11 +29,11 @@ parameters(model) <- value
 
 \S4method{show}{TSSHMM}(object)
 
-create_batches(signal, bg, seed = 123, nrow = 1000)
+encode_obs(signal, bg, seed = 123, nrow = 1000)
 
-train(model, batches)
+train(model, obs)
 
-\S4method{train}{TSSHMM,list}(model, batches)
+\S4method{train}{TSSHMM,IntegerList}(model, obs)
 
 viterbi(model, signal, bg, ...)
 
@@ -56,10 +56,12 @@ probability matrix named "emis".}
 
 \item{seed}{Integer, seed used to shuffle the genome regions.}
 
-\item{nrow}{Integer, rows per batch.  Used for unit tests and not
-recommended to change because this value is optimal.}
+\item{nrow}{Integer, rows to convert at a time.  Primarily used for unit
+tests.  Lowering or raising would use would use less and more memory,
+respectively, because the encoding process suboptimally requires 70x
+more memory than the input data.}
 
-\item{batches}{list of integers of encoded windows.}
+\item{obs}{IntegerList of encoded observation windows.}
 
 \item{...}{Optional arguments passed on from generics to methods.}
 
@@ -75,9 +77,9 @@ limit; the actual number of background windows is calculated
 from the model.}
 }
 \description{
-Initialize, train, and decode nascent RNA reads to find transcription start
-sites using Andre Martin's 2014 hidden Markov model for PRO-cap reads and
-Pariksheet Nanda's extension for PRO-seq background reads.
+Find promoter regions in nascent RNA data using Andre Martin's 2014 hidden
+Markov model for PRO-cap reads, and Pariksheet Nanda's model extension to
+replace the background reference with a full gene transcription assay.
 }
 \details{
 The model takes inputs of raw nascent RNA counts, aggregates 10 basepair
@@ -158,32 +160,37 @@ emissions.
 \section{Model Training}{
 
 
-batches <- create_batches(signal, background)
-updates <- train(model, batches)
+obs <- encode_obs(signal, background)
+updates <- train(model, obs)
 
-\code{batches(signal, background)} returns a \code{list} of \code{IntegerList} encoded
+\code{encode_obs(signal, background)} returns an \code{IntegerList} of encoded
 observation states for training.  The arguments, \code{signal} and \code{bg}, are
 stranded, single base \code{GRanges} with integer scores.
 
-The batch sizes are not configurable due to the limits of the maximum matrix
-size of the Baum-Welch training implementation, and minimum sequence count
-for training the >= 0.99 probability of the background hidden state.
+The maximum length for each element in \code{obs} is not configurable.  The
+maximum length has been set to the upper limit of the Baum-Welch matrix
+maximum size.  Using a lower maximum length reduces training accuracy,
+because hidden states such as the background (B) and gene body (G) with
+their >= 0.99 probability require long contiguous sequences for more
+accurate training.
 
 \code{train(model, signal, background)} returns a \code{DataFrame} of parameters after
 each update, and transforms the \code{model} argument in-place with trained
-transition and emission probabilities.  The argument, \code{batches} produced by
-the \code{create_batches()} function contains the encoded observation states
-chunked into the \code{list} of batches.
+transition and emission probabilities.  The argument, \code{obs} produced by
+the \code{encode_obs()} function is an \code{IntegerList} of encoded observation
+states.
 
-After training, you may wish to save the parameters so that they can be
-reloaded in a later session as explained in the examples.
+After training, you may wish to save the model parameters so that they can
+be reloaded in a later R session as explained in the examples.  Note that
+the time used for encoding the observations typically takes a magnitude
+longer than the actual training.
 
 To train the model, the sparse reads of the signal and background need to be
 exploded into dense encoded windows categorized as either enriched, depleted
 or no-read observations, which are then processed by the Baum-Welch EM
 algorithm to update the model transition and emission probabilities.
 
-The training data are randomized and divided into batches large enough to
+The training data are randomized and divided into obs large enough to
 provide sufficient samples for the calculating the background state
 transitions, but small enough to work within numerical precision limits and
 to make the training process more observable.  On each batch, the input
@@ -227,11 +234,12 @@ signal
 # The remaining 2 signal peaks with no surrounding signal are ignored.
 stopifnot(length(promoters) == 1)
 
-# Model training with saving and reloading parameters.
+# Model training.
 #train(model, signal, bg)
 (params <- parameters(model))
-\dontrun{
-save(params, file = "model_trained_on_foo_dataset.RData")
+
+# Save and reload parameters.
+\dontrun{save(params, file = "model_trained_on_foo_dataset.RData")
 # ... in a later R session.
 load(file = "model_trained_on_foo_dataset.RData")
 }

@@ -1,3 +1,4 @@
+#' @importFrom IRanges IntegerList
 #' @importFrom S4Vectors DataFrame List
 #' @importFrom futile.logger flog.info
 #' @importFrom iterators nextElem idiv
@@ -9,9 +10,9 @@ NULL
 #'
 #' @description
 #'
-#' Initialize, train, and decode nascent RNA reads to find transcription start
-#' sites using Andre Martin's 2014 hidden Markov model for PRO-cap reads and
-#' Pariksheet Nanda's extension for PRO-seq background reads.
+#' Find promoter regions in nascent RNA data using Andre Martin's 2014 hidden
+#' Markov model for PRO-cap reads, and Pariksheet Nanda's model extension to
+#' replace the background reference with a full gene transcription assay.
 #'
 #' @details
 #'
@@ -224,32 +225,37 @@ df_updates <- function(model, n) {
 #' @rdname TSSHMM-class
 #' @section Model Training:
 #'
-#' batches <- create_batches(signal, background)
-#' updates <- train(model, batches)
+#' obs <- encode_obs(signal, background)
+#' updates <- train(model, obs)
 #'
-#' `batches(signal, background)` returns a `list` of `IntegerList` encoded
+#' `encode_obs(signal, background)` returns an `IntegerList` of encoded
 #' observation states for training.  The arguments, `signal` and `bg`, are
 #' stranded, single base `GRanges` with integer scores.
 #'
-#' The batch sizes are not configurable due to the limits of the maximum matrix
-#' size of the Baum-Welch training implementation, and minimum sequence count
-#' for training the >= 0.99 probability of the background hidden state.
+#' The maximum length for each element in `obs` is not configurable.  The
+#' maximum length has been set to the upper limit of the Baum-Welch matrix
+#' maximum size.  Using a lower maximum length reduces training accuracy,
+#' because hidden states such as the background (B) and gene body (G) with
+#' their >= 0.99 probability require long contiguous sequences for more
+#' accurate training.
 #'
 #' `train(model, signal, background)` returns a `DataFrame` of parameters after
 #' each update, and transforms the `model` argument in-place with trained
-#' transition and emission probabilities.  The argument, `batches` produced by
-#' the `create_batches()` function contains the encoded observation states
-#' chunked into the `list` of batches.
+#' transition and emission probabilities.  The argument, `obs` produced by
+#' the `encode_obs()` function is an `IntegerList` of encoded observation
+#' states.
 #'
-#' After training, you may wish to save the parameters so that they can be
-#' reloaded in a later session as explained in the examples.
+#' After training, you may wish to save the model parameters so that they can
+#' be reloaded in a later R session as explained in the examples.  Note that
+#' the time used for encoding the observations typically takes a magnitude
+#' longer than the actual training.
 #'
 #' To train the model, the sparse reads of the signal and background need to be
 #' exploded into dense encoded windows categorized as either enriched, depleted
 #' or no-read observations, which are then processed by the Baum-Welch EM
 #' algorithm to update the model transition and emission probabilities.
 #'
-#' The training data are randomized and divided into batches large enough to
+#' The training data are randomized and divided into obs large enough to
 #' provide sufficient samples for the calculating the background state
 #' transitions, but small enough to work within numerical precision limits and
 #' to make the training process more observable.  On each batch, the input
@@ -261,10 +267,12 @@ df_updates <- function(model, n) {
 #' @param signal Stranded, single base \code{GRanges} with integer score.
 #' @param bg Stranded, single base \code{GRanges} with integer score.
 #' @param seed Integer, seed used to shuffle the genome regions.
-#' @param nrow Integer, rows per batch.  Used for unit tests and not
-#'     recommended to change because this value is optimal.
+#' @param nrow Integer, rows to convert at a time.  Primarily used for unit
+#'     tests.  Lowering or raising would use would use less and more memory,
+#'     respectively, because the encoding process suboptimally requires 70x
+#'     more memory than the input data.
 #' @export
-create_batches <- function(signal, bg, seed = 123, nrow = 1e3) {
+encode_obs <- function(signal, bg, seed = 123, nrow = 1e3) {
     check_valid_hmm_reads(signal)
     check_valid_hmm_reads(bg)
     ## Train using both strands.  Use range() to estimate number of bases
@@ -280,11 +288,11 @@ create_batches <- function(signal, bg, seed = 123, nrow = 1e3) {
     regions <- sample(unlist(tile(range, width = width), use.names = FALSE))
     n_batches <- ceiling(length(regions) / nrow)
     flog.info(sprintf(paste(
-        "Creating %d batches with up to %d rows of windows each"),
+        "Creating %d obs with up to %d rows of windows each"),
         n_batches, nrow))
-    obs <- list()
+    obs <- IntegerList()
     completed <- 0
-    t_elapsed <- 0
+    t_diff <- 0
     i <- 0
     iterator <- idiv(length(regions), chunkSize = nrow)
 
@@ -300,7 +308,7 @@ create_batches <- function(signal, bg, seed = 123, nrow = 1e3) {
                      }
                  })
         if (finished) {
-            flog.info("Finished creating batches!")
+            flog.info("Finished creating obs!")
             break
         }
         ## Begin measure time used for generating this batch of training data.
@@ -322,16 +330,16 @@ create_batches <- function(signal, bg, seed = 123, nrow = 1e3) {
         ## tile_with_rev() to natively generate GRanges using vectorized
         ## rev input to eliminate wrapping the function with mapply() which
         ## produces the undesirable list output.
-        obs[[i]] <- encode(signal, bg, unlist(List(windows)))
+        obs <- append(obs, encode(signal, bg, unlist(List(windows))))
         ## End measure time used for generating this batch of data.
         t_end <- Sys.time()
         t_diff <- difftime(t_end, t_start, units = "secs")
-        t_elapsed <- t_elapsed + t_diff
+        t_diff <- t_diff + t_diff
         ## Report batch generation speed in windows per second, the batch
-        ## number and remaining total batches, time for processing this
-        ## batch, ETA to process remaining batches, total time elapsed, and
+        ## number and remaining total obs, time for processing this
+        ## batch, ETA to process remaining obs, total time elapsed, and
         ## total time of since beginning of training.
-        elapsed_mins <- as.numeric(t_elapsed, units = "mins")
+        elapsed_mins <- as.numeric(t_diff, units = "mins")
         rate_mins <- completed / elapsed_mins
         remaining <- length(regions) - completed
         eta_mins <- remaining / rate_mins
@@ -353,89 +361,67 @@ create_batches <- function(signal, bg, seed = 123, nrow = 1e3) {
 
 #' @rdname TSSHMM-class
 #' @param model S4 object of a pre-designed hidden Markov model.
-#' @param batches list of integers of encoded windows.
-setGeneric("train", function(model, batches) standardGeneric("train"))
+#' @param obs IntegerList of encoded observation windows.
+setGeneric("train", function(model, obs) standardGeneric("train"))
 #' @rdname TSSHMM-class
 #'
 #' @exportMethod train
 setMethod(
     "train",
-    signature = c("TSSHMM", "list"),
-    definition = function(model, batches) {
+    signature = c("TSSHMM", "IntegerList"),
+    definition = function(model, obs) {
         ## Allocate "updates" for plotting parameter changes later.  Adding +1
         ## to n_batches is to store the initial parameter values.
-        n_batches <- length(batches)
+        n_batches <- length(obs) > 0
         updates <- df_updates(model, n_batches + 1)
         idx <- params_idx(model)
         n_params <- length(unlist(idx))
-        obs <- vector() # For recording initial value of updates$samples
+
+        updates[1, 1] <- 0
+        updates[1, 1 + 1:n_params] <-
+            c(parameters(model)$trans[idx$trans],
+              parameters(model)$emis[idx$emis])
+
+        if (! length(obs)) {
+            return(DataFrame(updates))
+        }
 
         flog.info(
             sprintf("%4d: Model initial transition and emission matrices:", 0))
         flog.info(sprintf("%s", as(model, "character")))
 
-        updates[1, 1] <- sum(lengths(obs))
-        updates[1, 1 + 1:n_params] <-
+        ## Begin measure time used for generating this batch of training
+        ## data.
+        t_start <- Sys.time()
+        flog.info("Running Baum-Welch")
+        converged <- NA
+        .Call(C_train_loop, PACKAGE = "tsshmm", converged,
+              model@external_pointer, unlist(obs, use.names = FALSE),
+              lengths(obs))
+        ## End measure time used for training the model on this batch of
+        ## data.
+        t_end <- Sys.time()
+        t_diff <- difftime(t_end, t_start, units = "secs")
+
+        ## Model change.
+        flog.info(sprintf("Converged? %d", converged))
+        flog.info("Model transition and emission matrices:")
+        flog.info(sprintf("%s", as(model, "character")))
+
+        ## Report training speed in windows per second, and total time elapsed.
+        elapsed_mins <- as.numeric(t_diff, units = "mins")
+        rate_mins <- length(obs) / elapsed_mins
+        flog.info(sprintf(paste("Elapsed: %.1f mins",
+                                "Contigs: %d",
+                                "Rate: %.1f contigs/min",
+                                sep = ", "),
+                          as.numeric(t_diff, units = "secs"),
+                          length(obs),
+                          rate_mins))
+        updates[2, 1] <- sum(lengths(obs))
+        updates[2, 1 + 1:n_params] <-
             c(parameters(model)$trans[idx$trans],
               parameters(model)$emis[idx$emis])
-
-        t_elapsed <- 0
-        completed <- 0
-        chunks <- elementNROWS(batches)
-        for (i in seq_along(batches)) {
-            ## Begin measure time used for generating this batch of training
-            ## data.
-            t_start <- Sys.time()
-            completed <- completed + chunks[i]
-            obs <- batches[[1]]
-            flog.info(sprintf("%4d: Running Baum-Welch", i))
-            converged <- NA
-            ## Special case of small data.
-            if (length(batches) == 1) {
-                .Call(C_train_loop, PACKAGE = "tsshmm", converged,
-                      model@external_pointer, unlist(obs, use.names = FALSE),
-                      lengths(obs))
-            } else {
-                .Call(C_train, PACKAGE = "tsshmm", converged,
-                      model@external_pointer, unlist(obs, use.names = FALSE),
-                      lengths(obs))
-            }
-            ## End measure time used for training the model on this batch of
-            ## data.
-            t_end <- Sys.time()
-            t_diff <- difftime(t_end, t_start, units = "secs")
-            t_elapsed <- t_elapsed + t_diff
-
-            ## Model change.
-            flog.info(sprintf("%4d: Converged? %d", i, converged))
-            flog.info(
-                sprintf("%4d: Model transition and emission matrices:", i))
-            flog.info(sprintf("%s", as(model, "character")))
-
-            ## Report training speed in windows per second, the batch number and
-            ## remaining total batches, time for processing this batch, ETA to
-            ## process remaining batches, total time elapsed, and total time of
-            ## since beginning of training.
-            elapsed_mins <- as.numeric(t_elapsed, units = "mins")
-            rate_mins <- completed / elapsed_mins
-            remaining <- sum(chunks) - completed
-            eta_mins <- remaining / rate_mins
-            flog.info(sprintf(paste("%4d: This batch: %.0f secs",
-                                    "Elapsed: %.1f mins",
-                                    "Completed: %d/%d regions",
-                                    "Rate: %.1f regions/min",
-                                    "ETA: %.0f mins",
-                                    sep = ", "),
-                              i, as.numeric(t_diff, units = "secs"),
-                              elapsed_mins,
-                              completed, sum(chunks),
-                              rate_mins,
-                              eta_mins))
-            updates[i+1, 1] <- sum(lengths(obs))
-            updates[i+1, 1 + 1:n_params] <-
-                c(parameters(model)$trans[idx$trans],
-                  parameters(model)$emis[idx$emis])
-        }
         flog.info("Finished training!")
         DataFrame(updates)
     }
@@ -515,11 +501,12 @@ setMethod(
 #' # The remaining 2 signal peaks with no surrounding signal are ignored.
 #' stopifnot(length(promoters) == 1)
 #'
-#' # Model training with saving and reloading parameters.
+#' # Model training.
 #' #train(model, signal, bg)
 #' (params <- parameters(model))
-#' \dontrun{
-#' save(params, file = "model_trained_on_foo_dataset.RData")
+#'
+#' # Save and reload parameters.
+#' \dontrun{save(params, file = "model_trained_on_foo_dataset.RData")
 #' # ... in a later R session.
 #' load(file = "model_trained_on_foo_dataset.RData")
 #' }

@@ -3,8 +3,8 @@ context("train")
 test_that("train does not change model for empty data", {
     model <- new("TSSHMM")
     params <- parameters(model)
-    batches <- list()
-    updates <- train(model, batches)
+    obs <- IntegerList()
+    updates <- train(model, obs)
     expect_equal(parameters(model), params)
     expect_equal(nrow(updates), 1)
 })
@@ -22,8 +22,8 @@ test_that("train converges to true parameters", {
     .Call(C_simulate, PACKAGE = "tsshmm", obs, model@external_pointer)
     ## https://stackoverflow.com/a/6821395
     list_from_matrix <- function(x) lapply(seq_len(ncol(x)), function(i) x[,i])
-    batches <- list(IntegerList(list_from_matrix(t(obs))))
-    updates <- train(model, batches)
+    obs <- as(list_from_matrix(t(obs)), "IntegerList")
+    updates <- train(model, obs)
     diffs <-
         function(params) abs(params$trans["B", c("B", "N1", "P1")] -
                              parameters(model)$trans["B", c("B", "N1", "P1")])
