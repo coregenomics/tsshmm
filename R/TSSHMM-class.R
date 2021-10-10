@@ -226,6 +226,7 @@ df_updates <- function(model, n) {
 #' @section Model Training:
 #'
 #' obs <- encode_obs(signal, background)
+#' obs <- sample(obs) # shuffle
 #' updates <- train(model, obs)
 #'
 #' `encode_obs(signal, background)` returns an `IntegerList` of encoded
@@ -243,7 +244,7 @@ df_updates <- function(model, n) {
 #' each update, and transforms the `model` argument in-place with trained
 #' transition and emission probabilities.  The argument, `obs` produced by
 #' the `encode_obs()` function is an `IntegerList` of encoded observation
-#' states.
+#' states.  One must shuffle the observations before running training.
 #'
 #' After training, you may wish to save the model parameters so that they can
 #' be reloaded in a later R session as explained in the examples.  Note that
@@ -266,13 +267,12 @@ df_updates <- function(model, n) {
 #'
 #' @param signal Stranded, single base \code{GRanges} with integer score.
 #' @param bg Stranded, single base \code{GRanges} with integer score.
-#' @param seed Integer, seed used to shuffle the genome regions.
 #' @param nrow Integer, rows to convert at a time.  Primarily used for unit
 #'     tests.  Lowering or raising would use would use less and more memory,
 #'     respectively, because the encoding process suboptimally requires 70x
 #'     more memory than the input data.
 #' @export
-encode_obs <- function(signal, bg, seed = 123, nrow = 1e3) {
+encode_obs <- function(signal, bg, nrow = 1e3) {
     check_valid_hmm_reads(signal)
     check_valid_hmm_reads(bg)
     ## Train using both strands.  Use range() to estimate number of bases
@@ -283,9 +283,8 @@ encode_obs <- function(signal, bg, seed = 123, nrow = 1e3) {
                       sum(lengths(range)), width))
     ## Choose an initial batch size of most 100kb width windows and a small
     ## number of sequence rows and measure memory use for setting up this
-    ## training dataset.  Select regions in random order to be encoded.
-    set.seed(seed)
-    regions <- sample(unlist(tile(range, width = width), use.names = FALSE))
+    ## training dataset.
+    regions <- unlist(tile(range, width = width), use.names = FALSE)
     n_batches <- ceiling(length(regions) / nrow)
     flog.info(sprintf(paste(
         "Creating %d obs with up to %d rows of windows each"),

@@ -29,7 +29,7 @@ parameters(model) <- value
 
 \S4method{show}{TSSHMM}(object)
 
-encode_obs(signal, bg, seed = 123, nrow = 1000)
+encode_obs(signal, bg, nrow = 1000)
 
 train(model, obs)
 
@@ -53,8 +53,6 @@ probability matrix named "emis".}
 \item{signal}{Stranded, single base \code{GRanges} with integer score.}
 
 \item{bg}{Stranded, single base \code{GRanges} with integer score.}
-
-\item{seed}{Integer, seed used to shuffle the genome regions.}
 
 \item{nrow}{Integer, rows to convert at a time.  Primarily used for unit
 tests.  Lowering or raising would use would use less and more memory,
@@ -161,6 +159,7 @@ emissions.
 
 
 obs <- encode_obs(signal, background)
+obs <- sample(obs) # shuffle
 updates <- train(model, obs)
 
 \code{encode_obs(signal, background)} returns an \code{IntegerList} of encoded
@@ -178,7 +177,7 @@ accurate training.
 each update, and transforms the \code{model} argument in-place with trained
 transition and emission probabilities.  The argument, \code{obs} produced by
 the \code{encode_obs()} function is an \code{IntegerList} of encoded observation
-states.
+states.  One must shuffle the observations before running training.
 
 After training, you may wish to save the model parameters so that they can
 be reloaded in a later R session as explained in the examples.  Note that

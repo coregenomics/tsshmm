@@ -20,7 +20,7 @@ test_that("encode_obs segments up to 1e4 width 10 windows", {
     expect_equal(elementNROWS(obs), rep(1e4, 10))
 })
 
-test_that("encode_obs shuffles by rows", {
+test_that("encode_obs with sample shuffles by rows", {
     gr <- tile(GRanges("chr:1-1e6:+"), 1e4)[[1]]
     set.seed(123)
     scores <- function(theta)
@@ -30,7 +30,9 @@ test_that("encode_obs shuffles by rows", {
     obs <- list()
     seeds <- c(123, 456, 789)
     for (i in seq_along(seeds)) {
-        obs[[i]] <- encode_obs(signal, bg, seed = seeds[i])
+        obs[[i]] <- encode_obs(signal, bg)
+        set.seed(seeds[i])
+        obs[[i]] <- sample(obs[[i]])
     }
     digests <- function(x) sapply(x, digest::digest, USE.NAMES = FALSE)
     for (i in 1:(length(seeds) - 1)) {

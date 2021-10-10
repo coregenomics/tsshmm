@@ -270,8 +270,8 @@ Training the model consists of 3 steps:
 2. Encode the read coverage counts into the 3 categories of discrete emissions
    observed --- no signal, enriched, and depleted --- using `encode_obs()`,
    and then
-3. Feeding the obs into the model for training using `train()`, and collect the
-   collect the `DataFrame` of the parameter changes.
+3. Feeding the shuffled obs into the model for training using `train()`, and
+   collect the collect the `DataFrame` of the parameter changes.
 
 ```{r Train GRO-cap, dependson = "Inspect core2014 data", cache = params$cache}
 ## Initialize the model.
@@ -282,7 +282,11 @@ system.time(
     obs_grocap <- encode_obs(signal, bg_grocap)
 )
 
-## Train the model 30 times to converge parameters for these few observations.
+## Shuffle observations.
+set.seed(123)
+obs_grocap <- sample(obs_grocap)
+
+## Train the model.
 system.time(
     log_grocap <- train(model_grocap, obs_grocap)
 )
@@ -309,6 +313,9 @@ Duplicate the steps from the above GRO-cap section with 2 changes:
 system.time(
     obs_groseq <- encode_obs(signal, bg_groseq)
 )
+
+set.seed(456)
+obs_groseq <- sample(obs_groseq)
 
 system.time(
     log_groseq <- train(model_groseq, obs_groseq)
@@ -365,12 +372,12 @@ the putative tracks with epigenetic tracks.
 model_grocap <- new("TSSHMM")
 parameters(model_grocap) <- params_grocap
 prom_grocap <- granges(viterbi(model_grocap, signal, bg_grocap, tol = 1e-2))
-tss_grocap <- tss(signal, prom_grocap)
+(tss_grocap <- tss(signal, prom_grocap))
 
 model_groseq <- new("TSSHMM", bg_proseq = TRUE)
 parameters(model_groseq) <- params_groseq
 prom_groseq <- granges(viterbi(model_groseq, signal, bg_groseq, tol = 1e-2))
-tss_groseq <- tss(signal, prom_groseq)
+(tss_groseq <- tss(signal, prom_groseq))
 ```
 
 An often useful optional parameter to `tss()` is returning a `Pairs` object
