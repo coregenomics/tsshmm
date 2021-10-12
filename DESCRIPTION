@@ -50,6 +50,7 @@ Suggests:
     UpSetR,
     covr,
     digest,
+    dplyr,
     knitr,
     purrr,
     rmarkdown,
