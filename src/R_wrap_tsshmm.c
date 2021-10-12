@@ -13,7 +13,7 @@
 
 
 /** Decorate R's error() with file, function, and line. */
-# define lerror(fmt, args...) error("%s %s:%d: " fmt,  __FILE__, __func__, __LINE__, ##args)
+#define lerror(fmt) error("%s %s:%d: " fmt,__FILE__,__func__,__LINE__)
 
 
 /** Allocates a TSS hidden Markov model for training and Viterbi decoding.
