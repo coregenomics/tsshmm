@@ -663,7 +663,7 @@ setMethod(
                                 "Contigs: %d",
                                 "Rate: %.1f contigs/min",
                                 sep = ", "),
-                          as.numeric(t_diff, units = "secs"),
+                          as.numeric(t_diff, units = "mins"),
                           length(obs),
                           rate_mins))
         updates[2, 1] <- sum(lengths(obs))
