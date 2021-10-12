@@ -12,6 +12,7 @@
 #include "viterbi.h"
 
 
+/** Decorate R's error() with file, function, and line. */
 # define lerror(fmt, args...) error("%s %s:%d: " fmt,  __FILE__, __func__, __LINE__, ##args)
 
 
@@ -42,7 +43,6 @@ C_is_model_valid(SEXP is_valid, SEXP dim, SEXP trans, SEXP emis,
     be entirely held in RAM.
 
     @param converged Output of 0 if converged and -1 otherwise.
-    @param model HMM to train.
     @param obs Encoded integer observations.
     @param lengths Segmentation of observations to allow discontiguous training.
     @param dim Size-2 array of the number of states and emissions.

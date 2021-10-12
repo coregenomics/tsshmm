@@ -9,7 +9,7 @@
 
 /** Generate a random deviate and return index of probability that exceeds it.
 
-    @param model HMM to simulate from.
+    @param model HMM to lookup probabilities.
     @param n Number of indices to loop and check.
     @param from Previous value required to lookup model probability.
     @param f Lookup function for model emission, transition, or start state.
@@ -34,6 +34,7 @@ sample(ghmm_dmodel* model, int n, int from, double (*f)(ghmm_dmodel*, int, int))
 
 /** Lookup function for start state.
 
+    @param model HMM to lookup probabilities.
     @param unused Integer value for consistent lookup function signature.
     @param state Initial state index to lookup.
     @return Probability of starting state.
@@ -47,6 +48,7 @@ prob_start(ghmm_dmodel* model, int unused, int state)
 
 /** Lookup function for model emission.
 
+    @param model HMM to lookup probabilities.
     @param state Transition state index to lookup.
     @param ob Emission state index to lookup.
     @return Probability of emission.
@@ -59,6 +61,7 @@ prob_emis(ghmm_dmodel* model, int state, int ob)
 
 /** Lookup function for model transition.
 
+    @param model HMM to lookup probabilities.
     @param from Transition state index to lookup.
     @param to Transition state index to lookup.
     @return Probability of transition.
@@ -76,7 +79,7 @@ prob_trans(ghmm_dmodel* model, int from, int to)
     @param model HMM to simulate from.
     @param obs Output encoded integer observations.
     @param nrow Number of obs matrix rows.
-    @param nrow Number of obs matrix columns.
+    @param ncol Number of obs matrix columns.
 */
 void
 simulate(ghmm_dmodel* model, int* obs, int ncol, int nrow)
