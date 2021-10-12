@@ -64,7 +64,7 @@ test_that("viterbi_low_level decodes enhancer region", {
     ## These hidden states were calculated from the RcppHMM mentioned in the
     ## observations URLs and git commit ID above.
     expected_states <-
-        c(B, B, B, B, B, B, B, B, B, B,
+        c(N1, N2, N3, B, B, B, B, B, B, B,
           B, B, B, B, B, B, B, B, B, B,
           B, B, B, B, B, B, P1, P1, P1, P1,
           P2, P3, B, B, B, B, B, B, B, B,
@@ -87,5 +87,5 @@ test_that("viterbi_low_level has a vectorized implementation", {
     expect_equal(length(states_decoded), length(states_list))
     ## Regression test for seed 99.
     expect_equal(sum(states_decoded == states_list),
-                 c(912, 922, 952, 965, 931, 931, 937, 956, 965, 924))
+                 c(958, 955, 975, 980, 953, 957, 964, 979, 990, 948))
 })
