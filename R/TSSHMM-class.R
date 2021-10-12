@@ -2,7 +2,7 @@
 #' @importFrom S4Vectors DataFrame List
 #' @importFrom futile.logger flog.info
 #' @importFrom iterators nextElem idiv
-#' @importFrom methods callNextMethod
+#' @importFrom methods callNextMethod new validObject
 #' @importFrom stats complete.cases
 NULL
 
