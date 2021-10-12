@@ -1,6 +1,6 @@
 tol <- 10 ^ (-1 * 3:8)
 ## These expected values are calculated in the vignette appendix.
-x <- c(28, 39, 50, 60, 71, 82)
+x <- c(37, 48, 59, 69, 80, 91)
 stopifnot(length(tol) == length(x))
 n_low <- floor(x / 10) * 10
 n_low <- ifelse(n_low == x, floor((x - 1) / 10) * 10, n_low)
@@ -43,10 +43,9 @@ test_that("viterbi_by_strand joins signal regions", {
     promoters_no_metadata <- promoters
     mcols(promoters_no_metadata) <- NULL
     expect_equal(promoters_no_metadata,
-                 GRanges(c("chr1:111-300:+",
-                           "chr2:231-260:+",
-                           "chr2:281-410:+",
-                           "chr2:431-450:+")))
+                 GRanges(c("chr1:101-300:+",
+                           "chr2:201-260:+",
+                           "chr2:281-450:+")))
     gr_mask <- unlist(bases)[as.logical(mask)]
     n_ol <- sum(countOverlaps(gr_mask, promoters))
     expect_gt(n_ol / sum(mask), 0.8)
@@ -65,22 +64,16 @@ test_that("viterbi runs on both strands", {
     promoters_no_metadata <- promoters
     mcols(promoters_no_metadata) <- NULL
     expect_equal(promoters_no_metadata,
-                 GRanges(c("chr1:111-250:+",
-                           "chr1:261-290:+",
-                           "chr2:231-260:+",
-                           "chr2:281-409:+",
-                           "chr2:420-449:+")))
+                 GRanges(c("chr1:102-300:+",
+                           "chr2:202-260:+",
+                           "chr2:281-449:+")))
     strand(signal) <- "-"
     promoters <- viterbi(model, signal, bg)
     promoters_no_metadata <- promoters
     mcols(promoters_no_metadata) <- NULL
     expect_equal(promoters_no_metadata,
-                 GRanges(c("chr1:97-106:-",
-                           "chr1:108-135:-",
-                           "chr1:146-165:-",
-                           "chr1:167-214:-",
-                           "chr1:226-283:-",
-                           "chr2:219-268:-",
-                           "chr2:279-337:-",
-                           "chr2:348-437:-")))
+                 GRanges(c("chr1:96-283:-",
+                           "chr1:285-293:-",
+                           "chr2:219-437:-",
+                           "chr2:439-447:-")))
 })
