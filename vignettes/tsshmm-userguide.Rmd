@@ -266,7 +266,7 @@ bg_groseq <- core2014full[["GROseq"]]
 Training the model consists of 3 steps:
 
 1. Create the model object with the initial parameters shown in Figure
-   \ref{fig:hmm} using `new("TSSHMM")`,
+   \ref{fig:hmm} using `TSSHMM()`,
 2. Encode the read coverage counts into the 3 categories of discrete emissions
    observed --- no signal, enriched, and depleted --- using `encode_obs()`,
    and then
@@ -275,7 +275,7 @@ Training the model consists of 3 steps:
 
 ```{r Train GRO-cap, dependson = "Inspect core2014 data", cache = params$cache}
 ## Initialize the model.
-(model_grocap <- new("TSSHMM"))
+(model_grocap <- TSSHMM())
 
 ## Encode the signal and background into obs that the model can understand.
 system.time(
@@ -302,13 +302,13 @@ params_grocap <- parameters(model_grocap)
 
 Duplicate the steps from the above GRO-cap section with 2 changes:
 
-1. Pass the argument `bg_proseq = TRUE` when initializing the model to add the
+1. Pass the argument `bg_genebody = TRUE` when initializing the model to add the
    extra gene body (G) state and emission to the parameter matrices, and
 2. Use the GRO-seq data stored in `bg_groseq` instead of `bg_grocap` to
    generate the randomized training observations.
 
 ```{r Train GRO-seq, dependson = "Inspect core2014 data", cache = params$cache}
-(model_groseq <- new("TSSHMM", bg_proseq = TRUE))
+(model_groseq <- TSSHMM(bg_genebody = TRUE))
 
 system.time(
     obs_groseq <- encode_obs(signal, bg_groseq)
@@ -345,11 +345,8 @@ load(file = "tsshmm-params.RData")
 ## *** Ignore this code block if you're only following along with the tutorial.
 
 ## Reinitialize PRO-cap background model:
-model_grocap <- new("TSSHMM")
-parameters(model_grocap) <- params_grocap
-
-model_groseq <- new("TSSHMM", bg_proseq = TRUE)
-parameters(model_groseq) <- params_groseq
+(model_grocap <- do.call(TSSHMM, params_grocap))
+(model_groseq <- do.call(TSSHMM, params_groseq))
 ```
 
 # Model inference
@@ -369,13 +366,9 @@ enhancers, you may wish to remove annotated genes from the dataset, or overlap
 the putative tracks with epigenetic tracks.
 
 ```{r Detect promoters then search for TSSs within promoters, dependson = paste0("Train GRO-", c("cap", "seq")), cache = params$cache}
-model_grocap <- new("TSSHMM")
-parameters(model_grocap) <- params_grocap
 prom_grocap <- granges(viterbi(model_grocap, signal, bg_grocap, tol = 1e-2))
 (tss_grocap <- tss(signal, prom_grocap))
 
-model_groseq <- new("TSSHMM", bg_proseq = TRUE)
-parameters(model_groseq) <- params_groseq
 prom_groseq <- granges(viterbi(model_groseq, signal, bg_groseq, tol = 1e-2))
 (tss_groseq <- tss(signal, prom_groseq))
 ```

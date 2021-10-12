@@ -59,10 +59,10 @@ update_initial_states(ghmm_dmodel* model)
   model->s[P1].pi = model->s[B].out_a[2] / sum;
 }
 
-/** Run Baum-Welch training for large input data.
+/** Run Baum-Welch training for input data.
 
-    Run a single step of Buam-Welch training, because we cannot fit the entire
-    training sequence from realistic data in RAM.
+    Run Buam-Welch training until convergence, for a training sequence that can
+    be entirely held in RAM.
 
     @param converged Output of 0 if converged and -1 otherwise.
     @param model HMM to train.
@@ -72,30 +72,6 @@ update_initial_states(ghmm_dmodel* model)
 */
 void
 train(int* converged, ghmm_dmodel* model, int* obs, int* lengths, int n)
-{
-  ghmm_dseq *seq = NULL;
-  sequence_alloc(&seq, obs, lengths, n);
-  /* Set the likelihood-delta to zero to ignore the likelihood-delta condition
-     to complete a single pass of all the data instead of terminating
-     prematurely. */
-  *converged = ghmm_dmodel_baum_welch_nstep(model, seq, 1, 0);
-  update_initial_states(model);
-  sequence_free(&seq);
-}
-
-/** Run Baum-Welch training for small input data.
-
-    Run Buam-Welch training until convergence, for a small training sequence
-    that can be entirely held in RAM.
-
-    @param converged Output of 0 if converged and -1 otherwise.
-    @param model HMM to train.
-    @param obs Encoded integer observations.
-    @param lengths Segmentation of observations to allow discontiguous training.
-    @param n Number of observation sequences.
-*/
-void
-train_loop(int* converged, ghmm_dmodel* model, int* obs, int* lengths, int n)
 {
   ghmm_dseq *seq = NULL;
   sequence_alloc(&seq, obs, lengths, n);

@@ -11,169 +11,126 @@
 #include "tss.h"
 #include "viterbi.h"
 
-/** Frees the memory of a TSS hidden Markov model.
 
-    @param external_pointer Pointer to the TSS hidden Markov model C object.
- */
-void
-C_model_destroy(SEXP external_pointer)
-{
-  ghmm_dmodel* model = R_ExternalPtrAddr(external_pointer);
-  R_ClearExternalPtr(external_pointer);
-  ghmm_dmodel_free(&model);
-}
+# define lerror(fmt, args...) error("%s %s:%d: " fmt,  __FILE__, __func__, __LINE__, ##args)
+
 
 /** Allocates a TSS hidden Markov model for training and Viterbi decoding.
 
-    @param external_pointer Pointer to the TSS hidden Markov model C object.
-    @param proseq Whether to use PRO-seq as background instead of GRO-cap.
+    @param is_valid Output whether the HMM is valid.
+    @param dim Size-2 array of the number of states and emissions.
+    @param trans Transitions flat matrix.
+    @param emis Emissions flat matrix.
+    @param emis_tied Tied emissions indices.
+    @param start Starting probability of states.
     @return The nil object
 */
 SEXP
-C_model_tsshmm(SEXP external_pointer, SEXP proseq)
+C_is_model_valid(SEXP is_valid, SEXP dim, SEXP trans, SEXP emis,
+		 SEXP emis_tied, SEXP start)
 {
   ghmm_dmodel* model = NULL;
-  model_tsshmm(&model, *INTEGER(proseq));
-  R_SetExternalPtrAddr(external_pointer, model);
-  /* Destroy the model when the R object is garbage collected, including on
-     exit of R. */
-  R_RegisterCFinalizerEx(external_pointer, C_model_destroy, TRUE);
+  model_init(&model, INTEGER(is_valid), INTEGER(dim), REAL(trans), REAL(emis),
+	     INTEGER(emis_tied), REAL(start));
+  ghmm_dmodel_free(&model);
   return R_NilValue;
 }
 
-/** Read model sizes to allocate storage for R matrices.
+/** Run Baum-Welch training for input data.
 
-    @param n_states Output number of model states.
-    @param n_emis Output number of model emissions.
-    @param model Pointer to initialized HMM.
-    @return The nil object
- */
-SEXP
-C_model_sizes(SEXP n_states, SEXP n_emis, SEXP model)
-{
-  model_sizes(INTEGER(n_states), INTEGER(n_emis), R_ExternalPtrAddr(model));
-  return R_NilValue;
-}
-
-/** Read model transition and emission matrices.
-
-    Not all transitions are valid; invalid transitions are filled with NA
-    values.
-
-    @param trans Output transition flat matrix.
-    @param emis Output emission flat matrix.
-    @param model Pointer to initialized HMM.
-    @return The nil object
- */
-SEXP
-C_model_matrices(SEXP trans, SEXP emis, SEXP model)
-{
-  model_matrices(REAL(trans), REAL(emis), R_ExternalPtrAddr(model));
-  return R_NilValue;
-}
-
-/** Write model transition and emission matrices.
-
-    @param trans Input transition flat matrix.
-    @param emis Input emission flat matrix.
-    @param model Pointer to initialized HMM to update.
-    @return The nil object
- */
-SEXP
-C_model_set_matrices(SEXP trans, SEXP emis, SEXP model)
-{
-  model_set_matrices(REAL(trans), REAL(emis), R_ExternalPtrAddr(model));
-  return R_NilValue;
-}
-
-
-/** Read tied emissions from the model.
-
-    @param tied_emis Output 1-based indices of tied emissions.
-    @param model Pointer to initialized HMM.
-    @return The nil object
- */
-SEXP
-C_model_tied_emis(SEXP tied_emis, SEXP model)
-{
-  model_tied_emis(INTEGER(tied_emis), R_ExternalPtrAddr(model));
-  return R_NilValue;
-}
-
-
-/** Run Baum-Welch training for large input data.
-
-    Run a single step of Buam-Welch training, because we cannot fit the entire
-    training sequence from realistic data in RAM.
+    Run Buam-Welch training until convergence, for a training sequence that can
+    be entirely held in RAM.
 
     @param converged Output of 0 if converged and -1 otherwise.
     @param model HMM to train.
     @param obs Encoded integer observations.
     @param lengths Segmentation of observations to allow discontiguous training.
+    @param dim Size-2 array of the number of states and emissions.
+    @param trans Transitions flat matrix.
+    @param emis Emissions flat matrix.
+    @param emis_tied Tied emissions indices.
+    @param start Starting probability of states.
     @return The nil object
 */
 SEXP
-C_train(SEXP converged, SEXP model, SEXP obs, SEXP lengths)
+C_train(SEXP converged, SEXP obs, SEXP lengths, SEXP dim, SEXP trans,
+	SEXP emis, SEXP emis_tied, SEXP start)
 {
+  ghmm_dmodel* model = NULL;
+  int is_valid = 0;
+  INTEGER(converged)[0] = 0;
+  model_init(&model, &is_valid, INTEGER(dim), REAL(trans), REAL(emis),
+	     INTEGER(emis_tied), REAL(start));
+  if (! is_valid) {
+    ghmm_dmodel_free(&model);
+    lerror("model provided is invalid!  See reasons above.");
+  }
   train(INTEGER(converged),
-	R_ExternalPtrAddr(model),
+	model,
 	INTEGER(obs),
 	INTEGER(lengths),
 	LENGTH(lengths));
-  return R_NilValue;
-}
-
-/** Run Baum-Welch training for small input data.
-
-    Run a single step of Buam-Welch training, because we cannot fit the entire
-    training sequence from realistic data in RAM.
-
-    @param converged Output of 0 if converged and -1 otherwise.
-    @param model HMM to train.
-    @param obs Encoded integer observations.
-    @param lengths Segmentation of observations to allow discontiguous training.
-    @return The nil object
-*/
-SEXP
-C_train_loop(SEXP converged, SEXP model, SEXP obs, SEXP lengths)
-{
-  train_loop(INTEGER(converged),
-	     R_ExternalPtrAddr(model),
-	     INTEGER(obs),
-	     INTEGER(lengths),
-	     LENGTH(lengths));
+  ghmm_dmodel_free(&model);
   return R_NilValue;
 }
 
 /** Simulate data from a hidden Markov model.
 
     @param obs Output encoded integer observations.
-    @param model HMM to simulate from.
+    @param dim Size-2 array of the number of states and emissions.
+    @param trans Transitions flat matrix.
+    @param emis Emissions flat matrix.
+    @param emis_tied Tied emissions indices.
+    @param start Starting probability of states.
     @return The nil object
 */
 SEXP
-C_simulate(SEXP obs, SEXP model)
+C_simulate(SEXP obs, SEXP dim, SEXP trans, SEXP emis, SEXP emis_tied,
+	   SEXP start)
 {
-  simulate(R_ExternalPtrAddr(model), INTEGER(obs), nrows(obs), ncols(obs));
+  ghmm_dmodel* model = NULL;
+  int is_valid = 0;
+  model_init(&model, &is_valid, INTEGER(dim), REAL(trans), REAL(emis),
+	     INTEGER(emis_tied), REAL(start));
+  if (! is_valid) {
+    ghmm_dmodel_free(&model);
+    lerror("model provided is invalid!  See reasons above.");
+  }
+  simulate(model, INTEGER(obs), nrows(obs), ncols(obs));
+  ghmm_dmodel_free(&model);
   return R_NilValue;
 }
 
 /** Return the most probably Viterbi path.
 
     @param hidden_states Output of most probably hidden state path.
-    @param model Pointer to the trained HMM.
     @param observations Encoded integer observations.
     @param lengths Segmentation of observations to allow parallel calculation.
+    @param dim Size-2 array of the number of states and emissions.
+    @param trans Transitions flat matrix.
+    @param emis Emissions flat matrix.
+    @param emis_tied Tied emissions indices.
+    @param start Starting probability of states.
     @return The nil object
  */
 SEXP
-C_viterbi(SEXP hidden_states, SEXP model, SEXP observations, SEXP lengths)
+C_viterbi(SEXP hidden_states, SEXP observations, SEXP lengths, SEXP dim,
+	  SEXP trans, SEXP emis, SEXP emis_tied, SEXP start)
 {
+  ghmm_dmodel* model = NULL;
+  int is_valid = 0;
+  model_init(&model, &is_valid, INTEGER(dim), REAL(trans), REAL(emis),
+	     INTEGER(emis_tied), REAL(start));
+  if (! is_valid) {
+    ghmm_dmodel_free(&model);
+    lerror("model provided is invalid!  See reasons above.");
+  }
   viterbi(INTEGER(hidden_states),
-	  R_ExternalPtrAddr(model),
+	  model,
 	  INTEGER(observations),
 	  INTEGER(lengths),
 	  LENGTH(lengths));
+  ghmm_dmodel_free(&model);
   return R_NilValue;
 }
 

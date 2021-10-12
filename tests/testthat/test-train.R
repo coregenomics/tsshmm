@@ -1,7 +1,7 @@
 context("train")
 
 test_that("train does not change model for empty data", {
-    model <- new("TSSHMM")
+    model <- TSSHMM()
     params <- parameters(model)
     obs <- IntegerList()
     updates <- train(model, obs)
@@ -10,7 +10,7 @@ test_that("train does not change model for empty data", {
 })
 
 test_that("train converges to true parameters", {
-    model <- new("TSSHMM")
+    model <- TSSHMM()
     params_actual <- parameters(model)
 
     params_start <- params_actual
@@ -19,7 +19,9 @@ test_that("train converges to true parameters", {
 
     obs <- matrix(-1L, nrow = 100, ncol = 1e4)
     set.seed(123)
-    .Call(C_simulate, PACKAGE = "tsshmm", obs, model@external_pointer)
+    .Call(C_simulate, PACKAGE = "tsshmm", obs, dim(model),
+          c(t(transitions(model))), c(t(emissions(model))),
+          emissions_tied(model), start(model))
     ## https://stackoverflow.com/a/6821395
     list_from_matrix <- function(x) lapply(seq_len(ncol(x)), function(i) x[,i])
     obs <- as(list_from_matrix(t(obs)), "IntegerList")

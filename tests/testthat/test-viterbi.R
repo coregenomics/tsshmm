@@ -12,14 +12,14 @@ stopifnot(all(n_high > x))
 context("viterbi helpers")
 
 test_that("prom_dist is valid for several tolerances", {
-    model <- new("TSSHMM")
+    model <- TSSHMM()
     for (i in seq_along(tol)) {
         expect_equal(prom_dist(model, tol = tol[i]), x[i])
     }
 })
 
 test_that("prom_dist detects tolerance too stringent", {
-    model <- new("TSSHMM")
+    model <- TSSHMM()
     for (i in seq_along(tol)) {
         expect_error(prom_dist(model, tol = tol[i], n = n_low[i]))
         expect_silent(prom_dist(model, tol = tol[i], n = n_high[i]))
@@ -38,7 +38,7 @@ test_that("stranded always splits into + and - levels", {
 context("viterbi")
 
 test_that("viterbi_by_strand joins signal regions", {
-    model <- new("TSSHMM")
+    model <- TSSHMM()
     promoters <- viterbi_by_strand(model, signal, bg, ranges)
     promoters_no_metadata <- promoters
     mcols(promoters_no_metadata) <- NULL
@@ -53,14 +53,14 @@ test_that("viterbi_by_strand joins signal regions", {
 })
 
 test_that("viterbi_by_strand notifies about missing regions", {
-    model <- new("TSSHMM")
+    model <- TSSHMM()
     expect_silent(viterbi_by_strand(model, signal, bg, ranges))
     expect_message(viterbi_by_strand(model, signal, bg, c(ranges, empty)),
                    "Dropping 33[.]3%")
 })
 
 test_that("viterbi runs on both strands", {
-    model <- new("TSSHMM")
+    model <- TSSHMM()
     promoters <- viterbi(model, signal, bg)
     promoters_no_metadata <- promoters
     mcols(promoters_no_metadata) <- NULL

@@ -48,7 +48,7 @@ NULL
 #' \item{P1}{Peaked TSS moderate signal}
 #' \item{P2}{Peaked TSS high signal}
 #' \item{P3}{Peaked TSS moderate signal}
-#' \item{GB}{Gene-body signal in PRO-seq only}
+#' \item{GB}{Gene-body signal if background reference data provides it}
 #' }
 #'
 #' Finally, after the hidden states are obtained from Viterbi decoding, the
@@ -56,45 +56,93 @@ NULL
 #'
 #' @section Constructor:
 #'
-#' model <- new("TSSHMM")
-#' model <- new("TSSHMM", bg_proseq = TRUE)
+#' model <- TSSHMM()
+#' model <- TSSHMM(bg_genebody = TRUE)
 #'
-#' `new("TSSHMM")` returns a default model object to be trained and then used
-#' for decoding.  An optional argument `bg_proseq` uses PRO-seq for background
-#' instead of PRO-cap; the default is `bg_proseq = FALSE`.
-#'
-#' The TSS HMM model is implemented using the General Hidden Markov Model
-#' (GHMM) C library.  Due to the complexity of the GHMM's C-interface, the R
-#' wrapper provides no setters to modify the number of states or the number
-#' of observations of the model.
+#' `TSSHMM()` returns a default model object to be trained and then used
+#' for decoding.  An optional argument `bg_genebody` uses PRO-seq for
+#' background instead of PRO-cap; the default is `bg_genebody = FALSE`.
 #'
 #' @name TSSHMM-class
 #' @aliases TSSHMM
 #' @exportClass TSSHMM
-setClass("TSSHMM", slots = c(external_pointer = "externalptr",
-                             bg_proseq = "logical"))
+setClass(
+    "TSSHMM",
+    slots = c(
+        bg_genebody = "logical",
+        trans = "matrix",
+        emis = "matrix",
+        emis_tied = "integer"
+    )
+)
 setMethod(
     "initialize",
     signature = "TSSHMM",
-    definition = function(.Object, ..., bg_proseq = FALSE) {
+    definition = function(.Object, ..., bg_genebody = FALSE,
+                          trans = matrix(nrow = 0, ncol = 0),
+                          emis = matrix(nrow = 0, ncol = 0),
+                          emis_tied = vector("integer")) {
+        ## Initialize the model with default values.
+        bg_genebody(.Object) <- bg_genebody
+        ## Apply any user parameters.
+        parameters(.Object) <-
+            list(trans = trans, emis = emis, emis_tied = emis_tied)
+        validObject(.Object)
         ## Boilerplate per ?initialize to pass '...' arguments to future
         ## subclasses.
-        .Object <- callNextMethod()
-        ## Initialize the model and track the C struct pointer.
-        .Call(C_model_tsshmm, PACKAGE = "tsshmm", .Object@external_pointer,
-              bg_proseq)
+        .Object <-
+            callNextMethod(.Object, ..., trans = transitions(.Object),
+                           emis = emissions(.Object),
+                           emis_tied = emissions_tied(.Object))
         .Object
     }
 )
+
+#' @export
+TSSHMM <- function(bg_genebody = FALSE, trans = NULL, emis = NULL,
+                   emis_tied = NULL) {
+    ## Apply any user parameters.  new() requires us to match the inputs to the
+    ## slot types.  Setting an empty value is treated as a noop.
+    if (is.null(trans))
+        trans <- matrix(nrow = 0, ncol = 0)
+    if (is.null(emis))
+        emis <- matrix(nrow = 0, ncol = 0)
+    if (is.null(emis_tied))
+        emis_tied <- vector("integer")
+    new("TSSHMM",
+        bg_genebody = bg_genebody,
+        trans = trans,
+        emis = emis,
+        emis_tied = emis_tied)
+}
+
+setValidity(
+    "TSSHMM",
+    function(object) {
+        is_valid <- vector("integer", 1)
+        .Call(C_is_model_valid,
+              PACKAGE = "tsshmm",
+              is_valid,
+              dim(object),
+              c(t(transitions(object))),
+              c(t(emissions(object))),
+              emissions_tied(object),
+              start(object))
+        if (! is_valid) {
+            return("Error: Could not generate TSSHMM() due to C errors above.")
+        }
+        TRUE
+    })
 
 #' @rdname TSSHMM-class
 #' @section Accessors:
 #'
 #' `dim(x)` returns the number of states and emissions.
 #'
-#' `parameters(model)`, `parameters(model) <- list(trans = ..., emis = ...)`
-#' gets or sets 2 matrices: the transition state probability matrix, and the
-#' discrete observable emission probability matrix.
+#' `parameters(model)`, `parameters(model) <- list(trans = ..., emis = ...,
+#' emis_tied = ..., bg_genebody = ...)` gets or sets 2 matrices: the transition
+#' state probability matrix, and the discrete observable emission probability
+#' matrix.
 #'
 #' After training a model, you may wish to save the parameters to later reload
 #' to eliminiate retraining the model in the future.
@@ -105,45 +153,239 @@ setMethod(
     "dim",
     signature = "TSSHMM",
     definition = function(x) {
-        n_states <- vector("integer", length = 1)
-        n_emis <- vector("integer", length = 1)
-        .Call(C_model_sizes, PACKAGE = "tsshmm", n_states, n_emis,
-              x@external_pointer)
-        dim <- c(n_states, n_emis)
+        dim <- dim(emissions(x))
         names(dim) <- c("states", "emissions")
         dim
     }
 )
 
+## Internal method.
+setGeneric("bg_genebody",
+           function(x) standardGeneric("bg_genebody"))
+setMethod(
+    "bg_genebody",
+    signature = "TSSHMM",
+    definition = function(x) x@bg_genebody
+)
+
+## Internal method.
+setGeneric("bg_genebody<-",
+           function(x, value) standardGeneric("bg_genebody<-"))
+setMethod(
+    "bg_genebody<-",
+    signature = c("TSSHMM", "logical"),
+    definition = function(x, value) {
+        stopifnot(length(value) == 1L)
+        ## These states must match the enum order in src/models.c
+        names_trans <- c("B", "N1", "N2", "N3", "P1", "P2", "P3", "GB")
+        names_emis <- c("no_signal", "enriched", "depleted")
+        n_states <- length(names_trans)
+        n_emis <- length(names_emis)
+        emis <- ##   no signal  enriched  depleted
+            matrix(c(0.90,      0.05,     0.05, # B
+                     0.09,      0.90,     0.01, # N1
+                     0.09,      0.90,     0.01, # N2 - tied to N1
+                     0.09,      0.90,     0.01, # N3 - tied to N1
+                     0.10,      0.45,     0.45, # P1
+                     0.10,      0.45,     0.45, # P2 - tied to P1
+                     0.10,      0.45,     0.45, # P3 - tied to P1
+                     0.05,      0.05,     0.90  # GB
+                     ),
+                   nrow = n_states, byrow = TRUE,
+                   dimnames = list(names_trans, names_emis))
+        stopifnot(all(rowSums(emis) == 1L))
+        ## 0 is the untied sentinel value.  Tied values are indices of the
+        ## state they are tied to.
+        N1 <- 2L
+        P1 <- 5L
+        ##             B   N1  N2  N3  P2  P2  P3  GB
+        emis_tied <- c(0L, N1, N1, N1, P1, P1, P1, 0L)
+        trans <- ##  B      N1     N2   N3   P1     P2   P3    GB
+            matrix(c(0.990, 0.005, NA , NA , 0.005, NA , NA  , NA   , # B
+                     NA   , NA   , 1.0, NA , NA   , NA , NA  , NA   , # N1
+                     NA   , NA   , 0.5, 0.5, NA   , NA , NA  , NA   , # N2
+                     0.250, NA   , NA , NA , NA   , NA , NA  , 0.750, # N3
+                     NA   , NA   , NA , NA , 0.500, 0.5, NA  , NA   , # P1
+                     NA   , NA   , NA , NA , 0.450, 0.1, 0.45, NA   , # P2
+                     0.125, NA   , NA , NA , NA   , NA , 0.50, 0.375, # P3
+                     0.010, NA   , NA , NA , NA   , NA , NA  , 0.990  # GB
+                     ),
+                   nrow = n_states, byrow = TRUE,
+                   dimnames = list(names_trans, names_trans))
+        stopifnot(all(rowSums(trans, na.rm = TRUE) == 1L))
+        if (! value) { # Remove gene body state.
+            emis_tied <- emis_tied[-nrow(emis)]
+            emis <- emis[-nrow(emis), ]
+            trans <- trans[-nrow(trans), -ncol(trans)]
+            n_states <- nrow(trans)
+            B <- 1L
+            N3 <- 4L
+            P3 <- 7L
+            trans[N3, B] <- 1.0
+            trans[P3, c(B, P3)] <- c(0.5, 0.5)
+            stopifnot(all(rowSums(trans, na.rm = TRUE) == 1L))
+        }
+        ## Populate the model.
+        transitions(x) <- trans
+        emissions(x) <- emis
+        emissions_tied(x) <- emis_tied
+        x@bg_genebody <- value
+        x
+    }
+)
+
+## Internal method.
+setGeneric("transitions",
+           function(x) standardGeneric("transitions"))
+setMethod(
+    "transitions",
+    signature = "TSSHMM",
+    definition = function(x) x@trans
+)
+
+## Internal method.
+setGeneric("transitions<-",
+           function(x, value) standardGeneric("transitions<-"))
+setMethod(
+    "transitions<-",
+    signature = c("TSSHMM", "matrix"),
+    definition = function(x, value) {
+        ## Sanity check.
+        stopifnot(all(rowSums(value, na.rm = TRUE) == 1L))
+        ## When first instantiating the object, accept the value as is.
+        if (identical(dim(x@trans), c(0L, 0L))) {
+            x@trans <- value
+            return(x)
+        }
+        ## Empty input is a noop for skipped user parameter instantiation.
+        if (identical(value, matrix(nrow = 0, ncol = 0))) {
+            return(x)
+        }
+        ## Otherwise make sure the dimensions and NA values are consistent.
+        stopifnot(all(dim(x@trans) == dim(value)))
+        na_idx <- function(x) which(is.na(x))
+        stopifnot(all(na_idx(x@trans) == na_idx(value)))
+        ## Preserve dimnames.
+        dimnames <- dimnames(x@trans)
+        x@trans <- value
+        dimnames(value) <- dimnames
+        x
+    }
+)
+
+## Internal method.
+setGeneric("emissions",
+           function(x) standardGeneric("emissions"))
+setMethod(
+    "emissions",
+    signature = "TSSHMM",
+    definition = function(x) x@emis
+)
+
+## Internal method.
+setGeneric("emissions<-",
+           function(x, value) standardGeneric("emissions<-"))
+setMethod(
+    "emissions<-",
+    signature = c("TSSHMM", "matrix"),
+    definition = function(x, value) {
+        ## Sanity check.
+        stopifnot(all(rowSums(value) == 1L))
+        ## ## When first instantiating the object, accept the value as is.
+        if (identical(dim(x@emis), c(0L, 0L))) {
+            x@emis <- value
+            return(x)
+        }
+        ## Empty input is a noop for skipped user parameter instantiation.
+        if (identical(value, matrix(nrow = 0, ncol = 0))) {
+            return(x)
+        }
+        ## Otherwise make sure the dimensions are consistent and match tied
+        ## emissions.
+        stopifnot(all(dim(x@emis) == dim(value)))
+        stopifnot(! identical(emissions_tied(x), vector("integer")))
+        emis_tied <- emissions_tied(x)
+        emis_tied_to <- unique(emis_tied)
+        emis_tied_to <- emis_tied_to[emis_tied_to > 0L]
+        for (i in seq_along(emis_tied_to)) {
+            expected <- value[emis_tied_to[i], ]
+            stopifnot(all(apply(value[emis_tied == emis_tied_to[i], ], 1,
+                                function(row) all(row == expected))))
+        }
+        ## Preserve dimnames.
+        dimnames <- dimnames(x@emis)
+        x@emis <- value
+        dimnames(value) <- dimnames
+        x
+    }
+)
+
+## Internal method.
+setGeneric("emissions_tied",
+           function(x) standardGeneric("emissions_tied"))
+setMethod(
+    "emissions_tied",
+    signature = "TSSHMM",
+    definition = function(x) x@emis_tied
+)
+
+## Internal method.  Requires transitions to be instantiated!
+setGeneric("emissions_tied<-",
+           function(x, value) standardGeneric("emissions_tied<-"))
+setMethod(
+    "emissions_tied<-",
+    signature = c("TSSHMM", "integer"),
+    definition = function(x, value) {
+        ## Empty input is a noop for skipped user parameter instantiation.
+        if (identical(value, vector("integer"))) {
+            return(x)
+        }
+        ## Otherwise make sure the dimensions are consistent and the domain
+        ## matches the number of transition states.
+        stopifnot(length(value) == nrow(transitions(x)))
+        stopifnot(all(value >= 0L))
+        stopifnot(all(value <= length(value)))
+        x@emis_tied <- value
+        x
+    }
+)
+
+## Internal method.  Requires transitions to be instantiated!
+setMethod(
+    "start",
+    signature = "TSSHMM",
+    definition = function(x) {
+        trans <- transitions(x)
+        start <- vector("numeric", nrow(trans))
+        B <- 1
+        N1 <- 2
+        P1 <- 5
+        vec <- c(trans[B, N1], trans[B, P1])
+        start[N1] <- vec[1] / sum(vec)
+        start[P1] <- vec[2] / sum(vec)
+        stopifnot(sum(start) == 1L)
+        start
+    }
+)
+
 #' @rdname TSSHMM-class
-setGeneric("parameters", function(model) standardGeneric("parameters"))
+setGeneric("parameters", function(x) standardGeneric("parameters"))
 #' @rdname TSSHMM-class
 #' @exportMethod parameters
 setMethod(
     "parameters",
     signature = "TSSHMM",
-    definition = function(model) {
-        dim <- dim(model)
-        n_states <- dim["states"]
-        n_emis <- dim["emissions"]
-        trans <- vector("numeric", length = n_states * n_states);
-        emis <- vector("numeric", length = n_states * n_emis);
-        .Call(C_model_matrices, PACKAGE = "tsshmm", trans, emis,
-              model@external_pointer)
-        ## These states must match the enum order in src/models.c
-        names_trans <-
-            c("B", "N1", "N2", "N3", "P1", "P2", "P3", "GB")[1:n_states]
-        names_emis <- c("no_signal", "enriched", "depleted")
-        list(trans = t(matrix(trans, nrow = n_states,
-                              dimnames = list(names_trans, names_trans))),
-             emis = t(matrix(emis, ncol = n_states,
-                             dimnames = list(names_emis, names_trans))))
+    definition = function(x) {
+        list(trans = transitions(x),
+             emis = emissions(x),
+             emis_tied = emissions_tied(x),
+             bg_genebody = bg_genebody(x))
     }
 )
 
 #' @rdname TSSHMM-class
 setGeneric("parameters<-",
-           function(model, value) standardGeneric("parameters<-"))
+           function(x, value) standardGeneric("parameters<-"))
 #' @rdname TSSHMM-class
 #' @param value named list containing 2 model matrices: the transition state
 #'     probability matrix named "trans", and the discrete observable emission
@@ -152,10 +394,11 @@ setGeneric("parameters<-",
 setMethod(
     "parameters<-",
     signature = "TSSHMM",
-    definition = function(model, value) {
-        .Call(C_model_set_matrices, PACKAGE = "tsshmm", c(t(value$trans)),
-              c(t(value$emis)), model@external_pointer)
-        model
+    definition = function(x, value) {
+        transitions(x) <- value[["trans"]]
+        emissions_tied(x) <- value[["emis_tied"]]
+        emissions(x) <- value[["emis"]]
+        x
     }
 )
 
@@ -184,12 +427,11 @@ setMethod(
     }
 )
 
-params_idx <- function(model) {
-    params <- parameters(model)
-    emis_tied <- vector(mode = "integer", length = nrow(params$emis))
-    .Call(C_model_tied_emis, PACKAGE = "tsshmm", emis_tied,
-          model@external_pointer)
-    dim <- dim(model)
+params_idx <- function(x) {
+    params <- parameters(x)
+    emis_tied <- emissions_tied(x)
+    emis_tied[emis_tied == 0] <- which(emis_tied == 0)
+    dim <- dim(x)
     n_emis <- prod(dim)
     list(trans = which(! is.na(params$trans)),
          emis = matrix(1:n_emis,
@@ -394,9 +636,16 @@ setMethod(
         t_start <- Sys.time()
         flog.info("Running Baum-Welch")
         converged <- NA
-        .Call(C_train_loop, PACKAGE = "tsshmm", converged,
-              model@external_pointer, unlist(obs, use.names = FALSE),
-              lengths(obs))
+        .Call(C_train,
+              PACKAGE = "tsshmm",
+              converged,
+              unlist(obs, use.names = FALSE),
+              lengths(obs),
+              dim(model),
+              c(t(transitions(model))),
+              c(t(emissions(model))),
+              emissions_tied(model),
+              start(model))
         ## End measure time used for training the model on this batch of
         ## data.
         t_end <- Sys.time()
@@ -493,7 +742,7 @@ setMethod(
 #' score(signal) <- rep(5L, 4)
 #' signal
 #' (bg <- GRanges())
-#' (model <- new("TSSHMM"))
+#' (model <- TSSHMM())
 #' (promoters_peaked <- viterbi(model, signal, bg))
 #' # There is only 1 promoter in thise region because the first two signal
 #' # values filling 2x 20 bp windows are captured by the HMM as a promoter.
@@ -509,7 +758,7 @@ setMethod(
 #' # ... in a later R session.
 #' load(file = "model_trained_on_foo_dataset.RData")
 #' }
-#' (model <- new("TSSHMM"))
+#' (model <- TSSHMM())
 #' parameters(model) <- params
 #' model
 NULL

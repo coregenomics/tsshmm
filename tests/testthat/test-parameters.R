@@ -1,14 +1,14 @@
 context("parameters")
 
 test_that("TSSHMM states and emissions can be read with dim", {
-    model <- new("TSSHMM", bg_proseq = FALSE)
+    model <- TSSHMM(bg_genebody = FALSE)
     expect_equal(dim(model), c(states = 7, emissions = 3))
-    model <- new("TSSHMM", bg_proseq = TRUE)
+    model <- TSSHMM(bg_genebody = TRUE)
     expect_equal(dim(model), c(states = 8, emissions = 3))
 })
 
 test_that("TSSHMM parameters can be saved and loaded", {
-    model <- new("TSSHMM")
+    model <- TSSHMM()
     params_orig <- parameters(model)
     params_new <- params_orig
     params_new$trans["B", ] <- c(0.9, 0.05, NA, NA, 0.05, NA, NA)
@@ -34,10 +34,13 @@ test_that("params_names generates column-major concatenated dimnames", {
 })
 
 test_that("params_idx", {
-    # FIXME: externalptr of the second model is shared with the first!?!
-    model <- new("TSSHMM", bg_proseq = FALSE)
+    # Regression test of externalptr of the second model bizarrely
+    # being shared with the first model.  This test was fixed by no
+    # longer using externalptr anywhere in the code and moving all the
+    # low-level C mode logic into R.
+    model <- TSSHMM(bg_genebody = FALSE)
     n_params_procap <- length(unlist(params_idx(model)))
-    model <- new("TSSHMM", bg_proseq = TRUE)
+    model <- TSSHMM(bg_genebody = TRUE)
     n_params_proseq <- length(unlist(params_idx(model)))
     expect_gt(n_params_proseq,
               n_params_procap)

@@ -19,13 +19,13 @@
 \usage{
 \S4method{dim}{TSSHMM}(x)
 
-parameters(model)
+parameters(x)
 
-\S4method{parameters}{TSSHMM}(model)
+\S4method{parameters}{TSSHMM}(x)
 
-parameters(model) <- value
+parameters(x) <- value
 
-\S4method{parameters}{TSSHMM}(model) <- value
+\S4method{parameters}{TSSHMM}(x) <- value
 
 \S4method{show}{TSSHMM}(object)
 
@@ -42,8 +42,6 @@ viterbi(model, signal, bg, ...)
 \arguments{
 \item{x}{S4 object of a pre-designed hidden Markov model.}
 
-\item{model}{S4 object of a pre-designed hidden Markov model.}
-
 \item{value}{named list containing 2 model matrices: the transition state
 probability matrix named "trans", and the discrete observable emission
 probability matrix named "emis".}
@@ -58,6 +56,8 @@ probability matrix named "emis".}
 tests.  Lowering or raising would use would use less and more memory,
 respectively, because the encoding process suboptimally requires 70x
 more memory than the input data.}
+
+\item{model}{S4 object of a pre-designed hidden Markov model.}
 
 \item{obs}{IntegerList of encoded observation windows.}
 
@@ -112,7 +112,7 @@ for PRO-seq:
 \item{P1}{Peaked TSS moderate signal}
 \item{P2}{Peaked TSS high signal}
 \item{P3}{Peaked TSS moderate signal}
-\item{GB}{Gene-body signal in PRO-seq only}
+\item{GB}{Gene-body signal if background reference data provides it}
 }
 
 Finally, after the hidden states are obtained from Viterbi decoding, the
@@ -121,17 +121,12 @@ hidden states are converted back into stranded GRanges.
 \section{Constructor}{
 
 
-model <- new("TSSHMM")
-model <- new("TSSHMM", bg_proseq = TRUE)
+model <- TSSHMM()
+model <- TSSHMM(bg_genebody = TRUE)
 
-\code{new("TSSHMM")} returns a default model object to be trained and then used
-for decoding.  An optional argument \code{bg_proseq} uses PRO-seq for background
-instead of PRO-cap; the default is \code{bg_proseq = FALSE}.
-
-The TSS HMM model is implemented using the General Hidden Markov Model
-(GHMM) C library.  Due to the complexity of the GHMM's C-interface, the R
-wrapper provides no setters to modify the number of states or the number
-of observations of the model.
+\code{TSSHMM()} returns a default model object to be trained and then used
+for decoding.  An optional argument \code{bg_genebody} uses PRO-seq for
+background instead of PRO-cap; the default is \code{bg_genebody = FALSE}.
 }
 
 \section{Accessors}{
@@ -139,9 +134,9 @@ of observations of the model.
 
 \code{dim(x)} returns the number of states and emissions.
 
-\code{parameters(model)}, \code{parameters(model) <- list(trans = ..., emis = ...)}
-gets or sets 2 matrices: the transition state probability matrix, and the
-discrete observable emission probability matrix.
+\code{parameters(model)}, \code{parameters(model) <- list(trans = ..., emis = ..., emis_tied = ..., bg_genebody = ...)} gets or sets 2 matrices: the transition
+state probability matrix, and the discrete observable emission probability
+matrix.
 
 After training a model, you may wish to save the parameters to later reload
 to eliminiate retraining the model in the future.
@@ -226,7 +221,7 @@ signal <- GRanges(paste0("chr1:", c(100, 110, 200, 300), ":+"))
 score(signal) <- rep(5L, 4)
 signal
 (bg <- GRanges())
-(model <- new("TSSHMM"))
+(model <- TSSHMM())
 (promoters_peaked <- viterbi(model, signal, bg))
 # There is only 1 promoter in thise region because the first two signal
 # values filling 2x 20 bp windows are captured by the HMM as a promoter.
@@ -242,7 +237,7 @@ stopifnot(length(promoters) == 1)
 # ... in a later R session.
 load(file = "model_trained_on_foo_dataset.RData")
 }
-(model <- new("TSSHMM"))
+(model <- TSSHMM())
 parameters(model) <- params
 model
 }

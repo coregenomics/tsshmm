@@ -74,13 +74,13 @@ test_that("viterbi_low_level decodes enhancer region", {
           B, B, B, B, B, B, B, B, P1, P1,
           P1, P2, P3, B, B, B, B, B, B, B,
           B, B)
-    model <- new("TSSHMM")
+    model <- TSSHMM()
     hidden_states <- viterbi_low_level(model, observations)
     expect_equal(hidden_states, expected_states)
 })
 
 test_that("viterbi_low_level has a vectorized implementation", {
-    model <- new("TSSHMM")
+    model <- TSSHMM()
     states_decoded <- viterbi_low_level(model, obs_list)
     expect_type(states_decoded, "S4")
     expect_s4_class(states_decoded, "IntegerList")
