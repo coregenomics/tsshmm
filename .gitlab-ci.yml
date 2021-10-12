@@ -20,6 +20,7 @@ test:
     - doxygen
     # Coverage.
     - Rscript -e 'covr::package_coverage()'
+  coverage: '/tsshmm Coverage: \d+\.\d+/'
   cache:
     paths:
       - library/
