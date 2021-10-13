@@ -5,7 +5,6 @@
 
 #include "R_wrap_tsshmm.h"
 #include "models.h"
-#include "parameters.h"
 #include "simulate.h"
 #include "train.h"
 #include "tss.h"
