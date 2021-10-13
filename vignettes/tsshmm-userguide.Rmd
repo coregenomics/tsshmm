@@ -413,24 +413,38 @@ promoters using both types of background data, how differet are the TSS class
 within those background datasets?
 
 ```{r Compare TSS locations from using different backgrounds, dependson = "Detect promoters then search for TSSs within promoters", cache = params$cache}
-(ol <- findOverlaps(tss_grocap, tss_groseq))
+pairs_grocap_all <- tss(signal, prom_grocap, pairs = TRUE)
+pairs_groseq_all <- tss(signal, prom_groseq, pairs = TRUE)
+
+filter_tss <- function(pairs)
+    S4Vectors::first(pairs[
+                   ## TSS covers at least 3 states.
+                   width(second(pairs)) >= 30 &
+                   ## Signal of at least 2 counts.
+                   score(S4Vectors::first(pairs)) >= 2
+               ])
+
+tss_grocap_cmp <- filter_tss(pairs_grocap_all)
+tss_groseq_cmp <- filter_tss(pairs_groseq_all)
+
+(ol <- findOverlaps(tss_grocap_cmp, tss_groseq_cmp))
 length(ol)
-length(tss_grocap)
-length(tss_groseq)
+length(tss_grocap_cmp)
+length(tss_groseq_cmp)
 
 library(UpSetR)
 
 upset(
     fromExpression(
-        c(grocap = length(tss_grocap) - length(ol),
-          groseq  = length(tss_groseq) - length(ol),
+        c(grocap = length(tss_grocap_cmp) - length(ol),
+          groseq  = length(tss_groseq_cmp) - length(ol),
           `grocap&groseq` = length(ol))),
     order.by = "freq")
 ```
 
 Therefore, using the more plentiful and convenient GRO-seq background reference
 was still able to find `r sprintf("%.0f%%", 100 * length(ol) /
-length(tss_grocap))` of the GRO-cap reference TSSs.
+length(tss_grocap_cmp))` of the GRO-cap reference TSSs.
 
 \bibliography{refs}
 
