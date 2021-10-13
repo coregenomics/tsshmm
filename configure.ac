@@ -29,6 +29,26 @@ AC_OPENMP
 AC_PROG_CC
 AC_PROG_INSTALL
 
+# Check for memory problems with an address sanitizer.
+AC_ARG_ENABLE([asan],
+              [AS_HELP_STRING([--enable-asan],
+                              [When enabled, compile with -fsanitize=address.
+                               Note that compilation and loading requires the LD_PRELOAD
+                               environmental variable set, e.g.:
+                               LD_PRELOAD=libasan.so.5
+                               ...and for compilation and installation only,
+                               disable ASAN with:
+                               ASAN_OPTIONS=detect_leaks=0:use_odr_indicator=1
+              ])] # AS_HELP_STRING
+) # AC_ARG_ENABLE
+
+AS_IF(test x"$enable_asan" = xyes,
+      [AC_CHECK_LIB(asan, __sanitizer_report_error_summary,
+                    CFLAGS="$CFLAGS -fsanitize=address"
+                    LDFLAGS="$LDFLAGS -fsanitize=address"
+      )]
+)
+
 # Read in any --with-ghmm user preference.
 AC_ARG_WITH(ghmm,
             AS_HELP_STRING(--with-ghmm=GHMM_ROOT_OR_SEARCH_STRATEGY,
