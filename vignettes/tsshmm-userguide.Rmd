@@ -366,10 +366,10 @@ enhancers, you may wish to remove annotated genes from the dataset, or overlap
 the putative tracks with epigenetic tracks.
 
 ```{r Detect promoters then search for TSSs within promoters, dependson = paste0("Train GRO-", c("cap", "seq")), cache = params$cache}
-prom_grocap <- granges(viterbi(model_grocap, signal, bg_grocap, tol = 1e-2))
+(prom_grocap <- viterbi(model_grocap, signal, bg_grocap, tol = 1e-2))
 (tss_grocap <- tss(signal, prom_grocap))
 
-prom_groseq <- granges(viterbi(model_groseq, signal, bg_groseq, tol = 1e-2))
+(prom_groseq <- viterbi(model_groseq, signal, bg_groseq, tol = 1e-2))
 (tss_groseq <- tss(signal, prom_groseq))
 ```
 

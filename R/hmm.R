@@ -76,7 +76,7 @@ viterbi_by_strand <- function(model, signal, bg, ranges) {
     flog.debug("Checking inputs")
     strand <- runValue(strand(signal))
     if (length(strand) == 0L)
-        return(GRanges())
+        return(GRanges(states = IntegerList()))
     stopifnot(length(strand) == 1L)
     stopifnot(all(strand == runValue(strand(bg))))
     ## No signal at all in 80% of the annotated chr22+ enhancers regions!
