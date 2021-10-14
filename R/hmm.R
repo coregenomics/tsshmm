@@ -168,13 +168,12 @@ tile_with_rev <- function(x, width, rev) {
 }
 
 replace_unstranded <- function (gr) {
-    idx <- strand(gr) == "*"
-    if (length(idx) == 0L)
-        return(gr)
-    sort(c(
-        gr[! idx],
-        `strand<-`(gr[idx], value = "+"),
-        `strand<-`(gr[idx], value = "-")))
+    is_unstranded <- strand(gr) == "*"
+    if (! any(is_unstranded))
+        return(sort(gr))
+    sort(c(gr[! is_unstranded],
+           `strand<-`(gr[is_unstranded], value = "+"),
+           `strand<-`(gr[is_unstranded], value = "-")))
 }
 
 #' Find promoter peaks using 3 basepair tie-breaking.
