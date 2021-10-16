@@ -25,6 +25,7 @@ test_that("train converges to true parameters", {
     ## https://stackoverflow.com/a/6821395
     list_from_matrix <- function(x) lapply(seq_len(ncol(x)), function(i) x[,i])
     obs <- as(list_from_matrix(t(obs)), "IntegerList")
+    parameters(model) <- params_start
     updates <- train(model, obs)
     diffs <-
         function(params) abs(params$trans["B", c("B", "N1", "P1")] -
