@@ -635,7 +635,7 @@ setMethod(
         ## data.
         t_start <- Sys.time()
         flog.info("Running Baum-Welch")
-        converged <- NA
+        converged <- -2L
         .Call(C_train,
               PACKAGE = "tsshmm",
               converged,
