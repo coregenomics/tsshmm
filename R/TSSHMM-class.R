@@ -119,15 +119,14 @@ TSSHMM <- function(bg_genebody = FALSE, trans = NULL, emis = NULL,
 setValidity(
     "TSSHMM",
     function(object) {
-        is_valid <- vector("integer", 1)
-        .Call(C_is_model_valid,
-              PACKAGE = "tsshmm",
-              is_valid,
-              dim(object),
-              c(t(transitions(object))),
-              c(t(emissions(object))),
-              emissions_tied(object),
-              start(object))
+        is_valid <-
+            .Call(C_is_model_valid,
+                  PACKAGE = "tsshmm",
+                  dim(object),
+                  c(t(transitions(object))),
+                  c(t(emissions(object))),
+                  emissions_tied(object),
+                  start(object))
         if (! is_valid) {
             return("Error: Could not generate TSSHMM() due to C errors above.")
         }

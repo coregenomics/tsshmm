@@ -17,23 +17,23 @@
 
 /** Allocates a TSS hidden Markov model for training and Viterbi decoding.
 
-    @param is_valid Output whether the HMM is valid.
     @param dim Size-2 array of the number of states and emissions.
     @param trans Transitions flat matrix.
     @param emis Emissions flat matrix.
     @param emis_tied Tied emissions indices.
     @param start Starting probability of states.
-    @return The nil object
+    @return Logical size-1 vector whether the HMM is valid.
 */
 SEXP
-C_is_model_valid(SEXP is_valid, SEXP dim, SEXP trans, SEXP emis,
-		 SEXP emis_tied, SEXP start)
+C_is_model_valid(SEXP dim, SEXP trans, SEXP emis, SEXP emis_tied, SEXP start)
 {
+  SEXP is_valid = PROTECT(allocVector(LGLSXP, 1));
   ghmm_dmodel* model = NULL;
   model_init(&model, INTEGER(is_valid), INTEGER(dim), REAL(trans), REAL(emis),
 	     INTEGER(emis_tied), REAL(start));
   ghmm_dmodel_free(&model);
-  return R_NilValue;
+  UNPROTECT(1);
+  return is_valid;
 }
 
 /** Run Baum-Welch training for input data.
@@ -41,7 +41,6 @@ C_is_model_valid(SEXP is_valid, SEXP dim, SEXP trans, SEXP emis,
     Run Buam-Welch training until convergence, for a training sequence that can
     be entirely held in RAM.
 
-    @param converged Output of 0 if converged and -1 otherwise.
     @param obs Encoded integer observations.
     @param lengths Segmentation of observations to allow discontiguous training.
     @param dim Size-2 array of the number of states and emissions.
@@ -49,7 +48,7 @@ C_is_model_valid(SEXP is_valid, SEXP dim, SEXP trans, SEXP emis,
     @param emis Emissions flat matrix.
     @param emis_tied Tied emissions indices.
     @param start Starting probability of states.
-    @return The nil object
+    @param converged Output of 1 if converged and 0 otherwise.
 */
 SEXP
 C_train(SEXP converged, SEXP obs, SEXP lengths, SEXP dim, SEXP trans,
