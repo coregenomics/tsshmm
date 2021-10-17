@@ -74,16 +74,16 @@ C_train(SEXP converged, SEXP obs, SEXP lengths, SEXP dim, SEXP trans,
 
 /** Simulate data from a hidden Markov model.
 
-    @param obs Output encoded integer observations.
+    @param dim_obs Size-2 array of the desired output rows and columns.
     @param dim Size-2 array of the number of states and emissions.
     @param trans Transitions flat matrix.
     @param emis Emissions flat matrix.
     @param emis_tied Tied emissions indices.
     @param start Starting probability of states.
-    @return The nil object
+    @return Encoded integer observations.
 */
 SEXP
-C_simulate(SEXP obs, SEXP dim, SEXP trans, SEXP emis, SEXP emis_tied,
+C_simulate(SEXP dim_obs, SEXP dim, SEXP trans, SEXP emis, SEXP emis_tied,
 	   SEXP start)
 {
   ghmm_dmodel* model = NULL;
@@ -94,9 +94,12 @@ C_simulate(SEXP obs, SEXP dim, SEXP trans, SEXP emis, SEXP emis_tied,
     ghmm_dmodel_free(&model);
     lerror("model provided is invalid!  See reasons above.");
   }
+  SEXP obs =
+    PROTECT(allocMatrix(INTSXP, INTEGER(dim_obs)[0], INTEGER(dim_obs)[1]));
   simulate(model, INTEGER(obs), nrows(obs), ncols(obs));
   ghmm_dmodel_free(&model);
-  return R_NilValue;
+  UNPROTECT(1);
+  return obs;
 }
 
 /** Return the most probably Viterbi path.
