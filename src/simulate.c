@@ -82,20 +82,22 @@ prob_trans(ghmm_dmodel* model, int from, int to)
     @param ncol Number of obs matrix columns.
 */
 void
-simulate(ghmm_dmodel* model, int* obs, int nrow, int ncol)
+simulate(ghmm_dmodel* model, int* obs, int ncol, int nrow)
 {
-  for (int j = 0; j < nrow; ++j) {
+  /* Our function definition swaps the ncol and nrow values so that we can
+     write normal looking row-major code for a column-major S-expression. */
+  for (int i = 0; i < nrow; ++i) {
     /* Sample an initial state and observation. */
     int state = sample(model, model->N, -1, prob_start);
-    obs[nrow * j] = sample(model, model->M, state, prob_emis);
+    obs[ncol * i] = sample(model, model->M, state, prob_emis);
 
-    for (int i = 1; i < ncol; ++i) {
+    for (int j = 1; j < ncol; ++j) {
       /* Get next state and observation. */
       int idx = sample(model, model->s[state].out_states, state, prob_trans);
       /* Note that the state out_* arrays are sparse, which is why we have to
 	 dereference the output array "idx" to get the actual state. */
       state = model->s[state].out_id[idx];
-      obs[nrow * i + j] = sample(model, model->M, state, prob_emis);
+      obs[ncol * i + j] = sample(model, model->M, state, prob_emis);
     }
   }
 }
