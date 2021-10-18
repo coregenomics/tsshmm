@@ -134,6 +134,5 @@
 
 - Added GitLab continuous integration to regularly install and run `R CMD
   check` and using scripts in `tools/` directory.
-
 - C-level tests for `viterbi()` using multiple models are in a separate
   repository [gitlab.com/omsai/viterbi/](https://gitlab.com/omsai/viterbi/)
