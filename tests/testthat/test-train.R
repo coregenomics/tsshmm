@@ -1,12 +1,12 @@
 context("train")
 
 test_that("train does not change model for empty data", {
-    model <- TSSHMM()
-    params <- parameters(model)
+    model_orig <- TSSHMM()
+    params <- parameters(model_orig)
     obs <- IntegerList()
-    updates <- train(model, obs)
+    model <- train(model_orig, obs)
     expect_equal(parameters(model), params)
-    expect_equal(nrow(updates), 1)
+    expect_identical(model, model_orig)
 })
 
 test_that("train converges to true parameters", {
@@ -19,17 +19,16 @@ test_that("train converges to true parameters", {
 
     set.seed(123)
     obs <-
-        .Call(C_simulate, PACKAGE = "tsshmm", c(100L, 1e4L), dim(model),
-              c(t(transitions(model))), c(t(emissions(model))),
+        .Call(C_simulate, PACKAGE = "tsshmm", c(100L, 1e4L),
+              transitions(model), emissions(model),
               emissions_tied(model), start(model))
     ## https://stackoverflow.com/a/6821395
     list_from_matrix <- function(x) lapply(seq_len(ncol(x)), function(i) x[,i])
     obs <- as(list_from_matrix(t(obs)), "IntegerList")
     parameters(model) <- params_start
-    updates <- train(model, obs)
+    model <- train(model, obs)
     diffs <-
         function(params) abs(params$trans["B", c("B", "N1", "P1")] -
                              parameters(model)$trans["B", c("B", "N1", "P1")])
-    skip("Fix train not properly saving the new parameters")
     expect_true(all(diffs(params_actual) * 10 < diffs(params_start)))
 })

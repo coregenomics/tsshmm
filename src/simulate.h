@@ -8,6 +8,6 @@
 
 #include <ghmm/model.h>
 
-void simulate(ghmm_dmodel* model, int* obs, int ncol, int nrow);
+void simulate(ghmm_dmodel* model, int* obs, int nrow, int ncol);
 
 #endif	/* SIMULATE_H */

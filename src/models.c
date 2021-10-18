@@ -12,31 +12,29 @@
 
     @param model Output pointer to initialized HMM.
     @param is_valid Output whether the HMM is valid.
-    @param dim Size-2 array of the number of states and emissions.
-    @param trans Transitions flat matrix.
-    @param emis Emissions flat matrix.
+    @param n_states Number of states.
+    @param n_emis Number of emissions.
+    @param trans Transitions matrix.
+    @param emis Emissions matrix.
     @param emis_tied Tied emissions indices.
     @param start Starting probability of states.
  */
 void
-model_init(ghmm_dmodel** model, int* is_valid, int* dim, double* trans,
-	   double* emis, int* emis_tied, double* start)
+model_init(ghmm_dmodel** model, int* is_valid, int n_states, int n_emis,
+	   double* trans, double* emis, int* emis_tied, double* start)
 {
-  const int n_states = dim[0];
-  const int n_emis = dim[1];
-
   /* Initialize model. */
   int degree_out[n_states];
   int degree_in[n_states];
-  for (int i = 0; i < n_states; ++i) {
-    degree_out[i] = 0;
-    degree_in[i] = 0;
-    for (int j = 0; j < n_states; ++j) {
+  for (int j = 0; j < n_states; ++j) {
+    degree_out[j] = 0;
+    degree_in[j] = 0;
+    for (int i = 0; i < n_states; ++i) {
       if (! isnan(trans[i * n_states + j])) {
-	++degree_out[i];
+	++degree_out[j];
       }
       if (! isnan(trans[j * n_states + i])) {
-	++degree_in[i];
+	++degree_in[j];
       }
     }
   }
@@ -48,35 +46,35 @@ model_init(ghmm_dmodel** model, int* is_valid, int* dim, double* trans,
   ghmm_dstate* states = (*model)->s;
   int* tied_to = (*model)->tied_to;
 
-  for (int i = 0; i < n_states; ++i) {
+  for (int j = 0; j < n_states; ++j) {
     /* Transitions. */
-    states[i].out_states = degree_out[i];
-    states[i].in_states = degree_in[i];
+    states[j].out_states = degree_out[j];
+    states[j].in_states = degree_in[j];
     int out = 0;
     int in = 0;
-    for (int j = 0; j < n_states; ++j) {
+    for (int i = 0; i < n_states; ++i) {
       if (! isnan(trans[i * n_states + j])) {
-	states[i].out_id[out] = j;
-	states[i].out_a[out] = trans[i * n_states + j];
+	states[j].out_id[out] = i;
+	states[j].out_a[out] = trans[i * n_states + j];
 	++out;
       }
       if (! isnan(trans[j * n_states + i])) {
-	states[i].in_id[in] = j;
-	states[i].in_a[in] = trans[j * n_states + i];
+	states[j].in_id[in] = i;
+	states[j].in_a[in] = trans[j * n_states + i];
 	++in;
       }
     }
 
     /* Emissions. */
-    tied_to[i] = emis_tied[i] - 1;
-    for (int j = 0; j < n_emis; ++j)
-      states[i].b[j] = emis[i * n_emis + j];
+    tied_to[j] = emis_tied[j] - 1;
+    for (int i = 0; i < n_emis; ++i)
+      states[j].b[i] = emis[i * n_states + j];
 
     /* Starting probabilities. */
-    states[i].pi = start[i];
+    states[j].pi = start[j];
 
     /* No fixed parameters. */
-    states[i].fix = 0;
+    states[j].fix = 0;
   }
 
   /* Other model settings. */
@@ -96,4 +94,36 @@ model_init(ghmm_dmodel** model, int* is_valid, int* dim, double* trans,
   (*model)->alphabet = NULL;
 
   *is_valid = ghmm_dmodel_check(*model) == 0;
+}
+
+/** Read model transition matrix.
+
+    Not all transitions are valid; invalid transitions are filled with NA
+    values.
+
+    @param trans Output transition flat matrix.
+    @param model Pointer to initialized HMM.
+ */
+void
+model_trans(double* trans, ghmm_dmodel* model) {
+  const int n_states = model->N;
+  for (int j = 0; j < n_states; ++j)
+    for (int i = 0; i < n_states; ++i)
+      trans[i * n_states + j] =
+	ghmm_dmodel_check_transition(model, j, i) ?
+	ghmm_dmodel_get_transition(model, j, i) : NA_REAL;
+}
+
+/** Read model emission matrix.
+
+    @param emis Output emission flat matrix.
+    @param model Pointer to initialized HMM.
+ */
+void
+model_emis(double* emis, ghmm_dmodel* model) {
+  const int n_states = model->N;
+  const int n_emis = model->M;
+  for (int j = 0; j < n_states; ++j)
+    for (int i = 0; i < n_emis; ++i)
+      emis[i * n_states + j] = model->s[j].b[i];
 }

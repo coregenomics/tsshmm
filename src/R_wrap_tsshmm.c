@@ -17,20 +17,19 @@
 
 /** Allocates a TSS hidden Markov model for training and Viterbi decoding.
 
-    @param dim Size-2 array of the number of states and emissions.
-    @param trans Transitions flat matrix.
-    @param emis Emissions flat matrix.
+    @param trans Transitions matrix.
+    @param emis Emissions matrix.
     @param emis_tied Tied emissions indices.
     @param start Starting probability of states.
     @return Logical size-1 vector whether the HMM is valid.
 */
 SEXP
-C_is_model_valid(SEXP dim, SEXP trans, SEXP emis, SEXP emis_tied, SEXP start)
+C_is_model_valid(SEXP trans, SEXP emis, SEXP emis_tied, SEXP start)
 {
   SEXP is_valid = PROTECT(allocVector(LGLSXP, 1));
   ghmm_dmodel* model = NULL;
-  model_init(&model, INTEGER(is_valid), INTEGER(dim), REAL(trans), REAL(emis),
-	     INTEGER(emis_tied), REAL(start));
+  model_init(&model, INTEGER(is_valid), nrows(emis), ncols(emis), REAL(trans),
+	     REAL(emis), INTEGER(emis_tied), REAL(start));
   ghmm_dmodel_free(&model);
   UNPROTECT(1);
   return is_valid;
@@ -43,59 +42,69 @@ C_is_model_valid(SEXP dim, SEXP trans, SEXP emis, SEXP emis_tied, SEXP start)
 
     @param obs Encoded integer observations.
     @param lengths Segmentation of observations to allow discontiguous training.
-    @param dim Size-2 array of the number of states and emissions.
-    @param trans Transitions flat matrix.
-    @param emis Emissions flat matrix.
+    @param trans Transitions matrix.
+    @param emis Emissions matrix.
     @param emis_tied Tied emissions indices.
     @param start Starting probability of states.
-    @param converged Output of 1 if converged and 0 otherwise.
+    @return The new model and whether training converged.
 */
 SEXP
-C_train(SEXP converged, SEXP obs, SEXP lengths, SEXP dim, SEXP trans,
-	SEXP emis, SEXP emis_tied, SEXP start)
+C_train(SEXP obs, SEXP lengths, SEXP trans, SEXP emis, SEXP emis_tied,
+	SEXP start)
 {
   ghmm_dmodel* model = NULL;
   int is_valid = 0;
-  INTEGER(converged)[0] = 0;
-  model_init(&model, &is_valid, INTEGER(dim), REAL(trans), REAL(emis),
-	     INTEGER(emis_tied), REAL(start));
+  model_init(&model, &is_valid, nrows(emis), ncols(emis), REAL(trans),
+	     REAL(emis), INTEGER(emis_tied), REAL(start));
   if (! is_valid) {
     ghmm_dmodel_free(&model);
     lerror("model provided is invalid!  See reasons above.");
   }
+  SEXP converged = PROTECT(allocVector(LGLSXP, 1));
   train(INTEGER(converged),
 	model,
 	INTEGER(obs),
 	INTEGER(lengths),
 	LENGTH(lengths));
+  /* Copy the trained parameters from the model. */
+  SEXP trans_trained =
+    PROTECT(allocMatrix(REALSXP, nrows(trans), ncols(trans)));
+  model_trans(REAL(trans_trained), model);
+  SEXP emis_trained =
+    PROTECT(allocMatrix(REALSXP, nrows(emis), ncols(emis)));
+  model_emis(REAL(emis_trained), model);
   ghmm_dmodel_free(&model);
-  return R_NilValue;
+  /* Return convergence and trained parameters as a list object. */
+  SEXP list = PROTECT(allocVector(VECSXP, 3));
+  SET_VECTOR_ELT(list, 0, converged);
+  SET_VECTOR_ELT(list, 1, trans_trained);
+  SET_VECTOR_ELT(list, 2, emis_trained);
+  UNPROTECT(4);
+  return list;
 }
 
 /** Simulate data from a hidden Markov model.
 
-    @param dim_obs Size-2 array of the desired output rows and columns.
-    @param dim Size-2 array of the number of states and emissions.
-    @param trans Transitions flat matrix.
-    @param emis Emissions flat matrix.
+    @param dim Size-2 array of the desired output rows and columns.
+    @param trans Transitions matrix.
+    @param emis Emissions matrix.
     @param emis_tied Tied emissions indices.
     @param start Starting probability of states.
     @return Encoded integer observations.
 */
 SEXP
-C_simulate(SEXP dim_obs, SEXP dim, SEXP trans, SEXP emis, SEXP emis_tied,
-	   SEXP start)
+C_simulate(SEXP dim, SEXP trans, SEXP emis, SEXP emis_tied, SEXP start)
 {
   ghmm_dmodel* model = NULL;
   int is_valid = 0;
-  model_init(&model, &is_valid, INTEGER(dim), REAL(trans), REAL(emis),
-	     INTEGER(emis_tied), REAL(start));
+  model_init(&model, &is_valid, nrows(emis), ncols(emis), REAL(trans),
+	     REAL(emis), INTEGER(emis_tied), REAL(start));
   if (! is_valid) {
     ghmm_dmodel_free(&model);
     lerror("model provided is invalid!  See reasons above.");
   }
   SEXP obs =
-    PROTECT(allocMatrix(INTSXP, INTEGER(dim_obs)[0], INTEGER(dim_obs)[1]));
+    PROTECT(allocMatrix(INTSXP, INTEGER(dim)[0], INTEGER(dim)[1]));
   simulate(model, INTEGER(obs), nrows(obs), ncols(obs));
   ghmm_dmodel_free(&model);
   UNPROTECT(1);
@@ -104,35 +113,39 @@ C_simulate(SEXP dim_obs, SEXP dim, SEXP trans, SEXP emis, SEXP emis_tied,
 
 /** Return the most probably Viterbi path.
 
-    @param hidden_states Output of most probably hidden state path.
-    @param observations Encoded integer observations.
+    @param obs Encoded integer observations.
     @param lengths Segmentation of observations to allow parallel calculation.
-    @param dim Size-2 array of the number of states and emissions.
-    @param trans Transitions flat matrix.
-    @param emis Emissions flat matrix.
+    @param trans Transitions matrix.
+    @param emis Emissions matrix.
     @param emis_tied Tied emissions indices.
     @param start Starting probability of states.
-    @return The nil object
+    @return The most probable hidden state path.
  */
 SEXP
-C_viterbi(SEXP hidden_states, SEXP observations, SEXP lengths, SEXP dim,
-	  SEXP trans, SEXP emis, SEXP emis_tied, SEXP start)
+C_viterbi(SEXP obs, SEXP lengths, SEXP trans, SEXP emis, SEXP emis_tied,
+	  SEXP start)
 {
   ghmm_dmodel* model = NULL;
   int is_valid = 0;
-  model_init(&model, &is_valid, INTEGER(dim), REAL(trans), REAL(emis),
-	     INTEGER(emis_tied), REAL(start));
+  model_init(&model, &is_valid, nrows(emis), ncols(emis), REAL(trans),
+	     REAL(emis), INTEGER(emis_tied), REAL(start));
   if (! is_valid) {
     ghmm_dmodel_free(&model);
     lerror("model provided is invalid!  See reasons above.");
   }
+  int sum = 0;
+  for (int i = 0; i < length(lengths); ++i) {
+    sum += INTEGER(lengths)[i];
+  }
+  SEXP hidden_states = PROTECT(allocVector(INTSXP, sum));
   viterbi(INTEGER(hidden_states),
 	  model,
-	  INTEGER(observations),
+	  INTEGER(obs),
 	  INTEGER(lengths),
 	  LENGTH(lengths));
   ghmm_dmodel_free(&model);
-  return R_NilValue;
+  UNPROTECT(1);
+  return hidden_states;
 }
 
 /** Find peaks using 3 basepair tie-breaking.

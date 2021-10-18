@@ -14,10 +14,10 @@
 /** Table of C routine entry points addresses in the dynamic library. */
 static const R_CallMethodDef call_methods[] =
   {
-   CALLDEF(C_is_model_valid, 5),
-   CALLDEF(C_train, 8),
-   CALLDEF(C_simulate, 6),
-   CALLDEF(C_viterbi, 8),
+   CALLDEF(C_is_model_valid, 4),
+   CALLDEF(C_train, 6),
+   CALLDEF(C_simulate, 5),
+   CALLDEF(C_viterbi, 6),
    CALLDEF(C_tss, 6),
    { NULL, NULL, 0 }            /* Terminating NULL entry. */
   };

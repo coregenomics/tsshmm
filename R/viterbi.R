@@ -6,17 +6,15 @@ viterbi_low_level <- function(model, observations) {
     } else {
         lengths <- length(observations)
     }
-    hidden_states <- vector("integer", sum(lengths))
-    .Call(C_viterbi,
-          PACKAGE = "tsshmm",
-          hidden_states,
-          unlist(observations, use.names = FALSE),
-          lengths,
-          dim(model),
-          c(t(transitions(model))),
-          c(t(emissions(model))),
-          emissions_tied(model),
-          start(model))
+    hidden_states <-
+        .Call(C_viterbi,
+              PACKAGE = "tsshmm",
+              unlist(observations, use.names = FALSE),
+              lengths,
+              transitions(model),
+              emissions(model),
+              emissions_tied(model),
+              start(model))
     if (is.list(observations) || is(observations, "List")) {
         as(relist(hidden_states, observations), "IntegerList")
     } else {

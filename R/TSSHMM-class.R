@@ -122,9 +122,8 @@ setValidity(
         is_valid <-
             .Call(C_is_model_valid,
                   PACKAGE = "tsshmm",
-                  dim(object),
-                  c(t(transitions(object))),
-                  c(t(emissions(object))),
+                  transitions(object),
+                  emissions(object),
                   emissions_tied(object),
                   start(object))
         if (! is_valid) {
@@ -192,7 +191,7 @@ setMethod(
                      ),
                    nrow = n_states, byrow = TRUE,
                    dimnames = list(names_trans, names_emis))
-        stopifnot(all(rowSums(emis) == 1L))
+        stopifnot(all(zapsmall(rowSums(emis)) == 1L))
         ## 0 is the untied sentinel value.  Tied values are indices of the
         ## state they are tied to.
         N1 <- 2L
@@ -211,7 +210,7 @@ setMethod(
                      ),
                    nrow = n_states, byrow = TRUE,
                    dimnames = list(names_trans, names_trans))
-        stopifnot(all(rowSums(trans, na.rm = TRUE) == 1L))
+        stopifnot(all(zapsmall(rowSums(trans, na.rm = TRUE)) == 1L))
         if (! value) { # Remove gene body state.
             emis_tied <- emis_tied[-nrow(emis)]
             emis <- emis[-nrow(emis), ]
@@ -222,7 +221,7 @@ setMethod(
             P3 <- 7L
             trans[N3, B] <- 1.0
             trans[P3, c(B, P3)] <- c(0.5, 0.5)
-            stopifnot(all(rowSums(trans, na.rm = TRUE) == 1L))
+            stopifnot(all(zapsmall(rowSums(trans, na.rm = TRUE)) == 1L))
         }
         ## Populate the model.
         transitions(x) <- trans
@@ -250,7 +249,7 @@ setMethod(
     signature = c("TSSHMM", "matrix"),
     definition = function(x, value) {
         ## Sanity check.
-        stopifnot(all(rowSums(value, na.rm = TRUE) == 1L))
+        stopifnot(all(zapsmall(rowSums(value, na.rm = TRUE)) == 1L))
         ## When first instantiating the object, accept the value as is.
         if (identical(dim(x@trans), c(0L, 0L))) {
             x@trans <- value
@@ -267,7 +266,7 @@ setMethod(
         ## Preserve dimnames.
         dimnames <- dimnames(x@trans)
         x@trans <- value
-        dimnames(value) <- dimnames
+        dimnames(x@trans) <- dimnames
         x
     }
 )
@@ -289,7 +288,7 @@ setMethod(
     signature = c("TSSHMM", "matrix"),
     definition = function(x, value) {
         ## Sanity check.
-        stopifnot(all(rowSums(value) == 1L))
+        stopifnot(all(zapsmall(rowSums(value)) == 1L))
         ## ## When first instantiating the object, accept the value as is.
         if (identical(dim(x@emis), c(0L, 0L))) {
             x@emis <- value
@@ -314,7 +313,7 @@ setMethod(
         ## Preserve dimnames.
         dimnames <- dimnames(x@emis)
         x@emis <- value
-        dimnames(value) <- dimnames
+        dimnames(x@emis) <- dimnames
         x
     }
 )
@@ -362,7 +361,7 @@ setMethod(
         vec <- c(trans[B, N1], trans[B, P1])
         start[N1] <- vec[1] / sum(vec)
         start[P1] <- vec[2] / sum(vec)
-        stopifnot(sum(start) == 1L)
+        stopifnot(zapsmall(sum(start)) == 1L)
         start
     }
 )
@@ -468,7 +467,7 @@ df_updates <- function(model, n) {
 #'
 #' obs <- encode_obs(signal, background)
 #' obs <- sample(obs) # shuffle
-#' updates <- train(model, obs)
+#' model <- train(model, obs)
 #'
 #' `encode_obs(signal, background)` returns an `IntegerList` of encoded
 #' observation states for training.  The arguments, `signal` and `bg`, are
@@ -481,11 +480,10 @@ df_updates <- function(model, n) {
 #' their >= 0.99 probability require long contiguous sequences for more
 #' accurate training.
 #'
-#' `train(model, signal, background)` returns a `DataFrame` of parameters after
-#' each update, and transforms the `model` argument in-place with trained
-#' transition and emission probabilities.  The argument, `obs` produced by
-#' the `encode_obs()` function is an `IntegerList` of encoded observation
-#' states.  One must shuffle the observations before running training.
+#' `train(model, obs)` returns the `model` with updated parameters of
+#' transition and emission probabilities.  The argument, `obs` produced by the
+#' `encode_obs()` function is an `IntegerList` of encoded observation states.
+#' One must shuffle the observations before running training.
 #'
 #' After training, you may wish to save the model parameters so that they can
 #' be reloaded in a later R session as explained in the examples.  Note that
@@ -610,20 +608,8 @@ setMethod(
     "train",
     signature = c("TSSHMM", "IntegerList"),
     definition = function(model, obs) {
-        ## Allocate "updates" for plotting parameter changes later.  Adding +1
-        ## to n_batches is to store the initial parameter values.
-        n_batches <- length(obs) > 0
-        updates <- df_updates(model, n_batches + 1)
-        idx <- params_idx(model)
-        n_params <- length(unlist(idx))
-
-        updates[1, 1] <- 0
-        updates[1, 1 + 1:n_params] <-
-            c(parameters(model)$trans[idx$trans],
-              parameters(model)$emis[idx$emis])
-
         if (! length(obs)) {
-            return(DataFrame(updates))
+            return(model)
         }
 
         flog.info(
@@ -634,17 +620,18 @@ setMethod(
         ## data.
         t_start <- Sys.time()
         flog.info("Running Baum-Welch")
-        converged <- -2L
-        .Call(C_train,
-              PACKAGE = "tsshmm",
-              converged,
-              unlist(obs, use.names = FALSE),
-              lengths(obs),
-              dim(model),
-              c(t(transitions(model))),
-              c(t(emissions(model))),
-              emissions_tied(model),
-              start(model))
+        ret <-
+            .Call(C_train,
+                  PACKAGE = "tsshmm",
+                  unlist(obs, use.names = FALSE),
+                  lengths(obs),
+                  transitions(model),
+                  emissions(model),
+                  emissions_tied(model),
+                  start(model))
+        converged <- ret[[1]]
+        transitions(model) <- ret[[2]]
+        emissions(model) <- ret[[3]]
         ## End measure time used for training the model on this batch of
         ## data.
         t_end <- Sys.time()
@@ -665,12 +652,8 @@ setMethod(
                           as.numeric(t_diff, units = "mins"),
                           length(obs),
                           rate_mins))
-        updates[2, 1] <- sum(lengths(obs))
-        updates[2, 1 + 1:n_params] <-
-            c(parameters(model)$trans[idx$trans],
-              parameters(model)$emis[idx$emis])
         flog.info("Finished training!")
-        DataFrame(updates)
+        model
     }
 )
 

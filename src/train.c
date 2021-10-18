@@ -64,7 +64,7 @@ update_initial_states(ghmm_dmodel* model)
     Run Buam-Welch training until convergence, for a training sequence that can
     be entirely held in RAM.
 
-    @param converged Output of 0 if converged and -1 otherwise.
+    @param converged Output of 1 if converged and 0 otherwise.
     @param model HMM to train.
     @param obs Encoded integer observations.
     @param lengths Segmentation of observations to allow discontiguous training.
@@ -75,7 +75,7 @@ train(int* converged, ghmm_dmodel* model, int* obs, int* lengths, int n)
 {
   ghmm_dseq *seq = NULL;
   sequence_alloc(&seq, obs, lengths, n);
-  *converged = ghmm_dmodel_baum_welch(model, seq);
+  *converged = ghmm_dmodel_baum_welch(model, seq) == 0;
   update_initial_states(model);
   sequence_free(&seq);
 }
