@@ -22,6 +22,7 @@ test_that("train converges to true parameters", {
         .Call(C_simulate, PACKAGE = "tsshmm", c(100L, 1e4L),
               transitions(model), emissions(model),
               emissions_tied(model), start(model))
+    expect_equal(digest::digest(obs), "f1681b80ab2b8ad0512a544cebfa4db0")
     ## https://stackoverflow.com/a/6821395
     list_from_matrix <- function(x) lapply(seq_len(ncol(x)), function(i) x[,i])
     obs <- as(list_from_matrix(t(obs)), "IntegerList")
