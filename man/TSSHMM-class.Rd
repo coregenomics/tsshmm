@@ -155,7 +155,7 @@ emissions.
 
 obs <- encode_obs(signal, background)
 obs <- sample(obs) # shuffle
-updates <- train(model, obs)
+model <- train(model, obs)
 
 \code{encode_obs(signal, background)} returns an \code{IntegerList} of encoded
 observation states for training.  The arguments, \code{signal} and \code{bg}, are
@@ -168,11 +168,10 @@ because hidden states such as the background (B) and gene body (G) with
 their >= 0.99 probability require long contiguous sequences for more
 accurate training.
 
-\code{train(model, signal, background)} returns a \code{DataFrame} of parameters after
-each update, and transforms the \code{model} argument in-place with trained
-transition and emission probabilities.  The argument, \code{obs} produced by
-the \code{encode_obs()} function is an \code{IntegerList} of encoded observation
-states.  One must shuffle the observations before running training.
+\code{train(model, obs)} returns the \code{model} with updated parameters of
+transition and emission probabilities.  The argument, \code{obs} produced by the
+\code{encode_obs()} function is an \code{IntegerList} of encoded observation states.
+One must shuffle the observations before running training.
 
 After training, you may wish to save the model parameters so that they can
 be reloaded in a later R session as explained in the examples.  Note that

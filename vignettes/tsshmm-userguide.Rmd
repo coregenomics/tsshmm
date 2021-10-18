@@ -288,7 +288,7 @@ obs_grocap <- sample(obs_grocap)
 
 ## Train the model.
 system.time(
-    log_grocap <- train(model_grocap, obs_grocap)
+    model_grocap <- train(model_grocap, obs_grocap)
 )
 
 ## See the trained model parameters.
@@ -318,7 +318,7 @@ set.seed(456)
 obs_groseq <- sample(obs_groseq)
 
 system.time(
-    log_groseq <- train(model_groseq, obs_groseq)
+    model_groseq <- train(model_groseq, obs_groseq)
 )
 
 model_groseq
