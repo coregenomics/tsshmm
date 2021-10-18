@@ -1,4 +1,4 @@
-# tsshmm 0.7.0 (2020-09-17)
+# tsshmm 0.7.0 (2021-09-17)
 
 ## New features
 
@@ -45,7 +45,7 @@
   when using the bundled GHMM library.
 
 
-# tsshmm 0.6.0 (2020-07-21)
+# tsshmm 0.6.0 (2021-07-21)
 
 ## New features
 
