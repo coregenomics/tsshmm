@@ -135,8 +135,6 @@ AS_IF([test x$with_ghmm_strategy = x],
       ) # AS_IF
 ) # AS_IF
 
-AC_SUBST(GHMM_LIBS, -lghmm)
-
 # If GHMM_ROOT was provided, set the header and library paths.
 #
 # Check for the existance of include/ and lib/ sub-directories and if both are
@@ -180,7 +178,10 @@ AS_IF(test x$found_ghmm_system != xyes &&
       AM_CONDITIONAL(BUNDLED_GHMM, true)
       [AX_SUBDIRS_CONFIGURE([src/ghmm-0.9-rc3],
                             [[CFLAGS=$CFLAGS],
-			     [--enable-gsl=no],
+                             [--enable-static],
+                             [--disable-shared],
+                             [--with-pic],
+                             [--enable-gsl=no],
                              [--disable-gsltest],
                              [--with-rng=mt],
                              [--with-python=no],
@@ -191,8 +192,14 @@ AS_IF(test x$found_ghmm_system != xyes &&
       [AS_IF([test -d $GHMM_ROOT], [],
              AC_MSG_FAILURE(Directory of bundled GHMM not found.))]
       [AC_SUBST(GHMM_CPPFLAGS, ["-I$GHMM_ROOT/.."])]
-      # Using -rpath=. prefers the bundled over any system installation.
-      [AC_SUBST(GHMM_LDFLAGS, ["-Wl,-rpath=. -L$GHMM_ROOT/.libs"])]
+      # We don't need GMM_LIBS or GHMM_LDFLAGS because we can directly merge
+      # libraries using tsshmm_la_LIBADD per
+      # https://stackoverflow.com/a/13978856 and
+      # https://www.gnu.org/software/automake/manual/html_node/Libtool-Convenience-Libraries.html
+      #
+      # However we now need to link against libghmm's libxml2 dependency
+      # because we're merging libraries.
+      [PKG_CHECK_MODULES([LIBXML2], [libxml-2.0 >= 2.6])]
       AC_MSG_NOTICE(Applying patches to GHMM to fix errors and warnings from "R CMD check")
       # Patch bug in upstream's configure bug:
       #
@@ -239,7 +246,9 @@ AS_IF(test x$found_ghmm_system != xyes &&
 #include <ghmm/fbgibbs.h>' src/ghmm-0.9-rc3/tests/mcmc.c
       [touch -r src/ghmm-0.9-rc3/tests/mcmc.c{.bak,}]
       [diff -u src/ghmm-0.9-rc3/tests/mcmc.c{.bak,}]
-      AC_MSG_NOTICE(Finished patching GHMM)
+      AC_MSG_NOTICE(Finished patching GHMM),
+      # Only link if we're not using the static bundled dependency.
+      [AC_SUBST(GHMM_LIBS, -lghmm)]
 ) # AS_IF
 
 # Variables for Doxygen.
