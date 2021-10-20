@@ -1,4 +1,23 @@
 #!/bin/sh
+
+# Running `R CMD build` on a cloned git repository doesn't preserve the commit
+# time stamps and inadvertently triggers automake's refresh--am rule; update
+# the time stamps in the dependency order as to prevent this from happening for
+# this limited set of files.
+files_automake_refresh="
+configure.ac
+aclocal.m4
+src/Makefile.am
+src/Makefile.in
+configure
+"
+for file in $files_automake_refresh
+do
+    touch "$file"
+    sleep 0.01
+done
+
+# Remove generated files with make distclean
 if [ ! -f src/ghmm-0.9-rc3/Makefile ] && [ -f src/Makefile ]
 then
     # Edge case when the bundled dependency is not configured.
