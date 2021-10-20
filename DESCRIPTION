@@ -7,6 +7,8 @@ Authors@R:
            role = c("aut", "cre"),
            email = "pariksheet.nanda@uconn.edu",
            comment = c(ORCID = "0000-0001-9726-4552"))
+Author: Pairksheet Nanda [aut, cre]
+Maintainer: Pairksheet Nanda <pariksheet.nanda@uconn.edu>
 Description: Viterbi decoding of gene promoter regions and TSS sites from
     nuclear run-on and sequencing data.
 License: GPL-3
