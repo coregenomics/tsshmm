@@ -32,8 +32,8 @@ tools/missing
 libtool
 src/.deps/
 src/.libs/
-src/tsshmm.la
-src/tsshmm_la-*
+src/libtsshmm.la
+src/libtsshmm_la-*
 tools/ar-lib
 tools/config.guess
 tools/config.sub
