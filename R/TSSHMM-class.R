@@ -530,7 +530,7 @@ encode_obs <- function(signal, bg, nrow = 1e3) {
         n_batches, nrow))
     obs <- IntegerList()
     completed <- 0
-    t_diff <- 0
+    elapsed_mins <- 0
     i <- 0
     iterator <- idiv(length(regions), chunkSize = nrow)
 
@@ -572,12 +572,11 @@ encode_obs <- function(signal, bg, nrow = 1e3) {
         ## End measure time used for generating this batch of data.
         t_end <- Sys.time()
         t_diff <- difftime(t_end, t_start, units = "secs")
-        t_diff <- t_diff + t_diff
         ## Report batch generation speed in windows per second, the batch
         ## number and remaining total obs, time for processing this
         ## batch, ETA to process remaining obs, total time elapsed, and
         ## total time of since beginning of training.
-        elapsed_mins <- as.numeric(t_diff, units = "mins")
+        elapsed_mins <- elapsed_mins + as.numeric(t_diff, units = "mins")
         rate_mins <- completed / elapsed_mins
         remaining <- length(regions) - completed
         eta_mins <- remaining / rate_mins
