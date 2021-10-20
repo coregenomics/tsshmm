@@ -15,38 +15,11 @@ vignettes/*_files/
 autom4te.cache/
 config.log
 config.status
-configure
 src/Doxyfile
 src/Makefile
 
-# aclocal
-aclocal.m4
-
-# automake
-src/Makefile.in
-tools/compile
-tools/install-sh
-tools/missing
-
 # libtool
-libtool
 src/.deps/
 src/.libs/
 src/libtsshmm.la
 src/libtsshmm_la-*
-tools/ar-lib
-tools/config.guess
-tools/config.sub
-tools/depcomp
-tools/libtool.m4
-tools/ltmain.sh
-tools/ltoptions.m4
-tools/ltsugar.m4
-tools/ltversion.m4
-tools/lt~obsolete.m4
-
-# bundled dependency
-src/ghmm-0.9-rc3/
-
-# doxygen
-src/doc
