@@ -1,3 +1,9 @@
 #!/bin/sh
-test -f src/Makefile &&
+if [ ! -f src/ghmm-0.9-rc3/Makefile ] && [ -f src/Makefile ]
+then
+    # Edge case when the bundled dependency is not configured.
+    make -C src/ distclean DIST_SUBDIRS=
+elif [ -f src/Makefile ]
+then
     make -C src/ distclean
+fi
