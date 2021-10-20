@@ -183,14 +183,14 @@ exploded into dense encoded windows categorized as either enriched, depleted
 or no-read observations, which are then processed by the Baum-Welch EM
 algorithm to update the model transition and emission probabilities.
 
-The training data are randomized and divided into obs large enough to
-provide sufficient samples for the calculating the background state
-transitions, but small enough to work within numerical precision limits and
-to make the training process more observable.  On each batch, the input
-training data is transformed into dense training observations and then the
-Baum-Welch algorithm is run.  After each batch, the model state is shown
-alongside a time estimate to complete training if the logging level has not
-been reduced from the INFO level.
+The training data are divided into obs large enough to provide sufficient
+samples for the calculating the background state transitions, but small
+enough to work within numerical precision limits and to make the training
+process more observable.  On each batch, the input training data is
+transformed into dense training observations and then the Baum-Welch
+algorithm is run.  After each batch, the model state is shown alongside a
+time estimate to complete training if the logging level has not been reduced
+from the INFO level.
 }
 
 \section{Model Evaluation}{

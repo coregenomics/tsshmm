@@ -495,14 +495,14 @@ df_updates <- function(model, n) {
 #' or no-read observations, which are then processed by the Baum-Welch EM
 #' algorithm to update the model transition and emission probabilities.
 #'
-#' The training data are randomized and divided into obs large enough to
-#' provide sufficient samples for the calculating the background state
-#' transitions, but small enough to work within numerical precision limits and
-#' to make the training process more observable.  On each batch, the input
-#' training data is transformed into dense training observations and then the
-#' Baum-Welch algorithm is run.  After each batch, the model state is shown
-#' alongside a time estimate to complete training if the logging level has not
-#' been reduced from the INFO level.
+#' The training data are divided into obs large enough to provide sufficient
+#' samples for the calculating the background state transitions, but small
+#' enough to work within numerical precision limits and to make the training
+#' process more observable.  On each batch, the input training data is
+#' transformed into dense training observations and then the Baum-Welch
+#' algorithm is run.  After each batch, the model state is shown alongside a
+#' time estimate to complete training if the logging level has not been reduced
+#' from the INFO level.
 #'
 #' @param signal Stranded, single base \code{GRanges} with integer score.
 #' @param bg Stranded, single base \code{GRanges} with integer score.
@@ -518,7 +518,7 @@ encode_obs <- function(signal, bg, nrow = 1e3) {
     ## to feed for training.
     range <- range(c(signal, bg))
     width <- 1e5
-    flog.info(sprintf("Split %g bases into %d windows and randomize sequence",
+    flog.info(sprintf("Split %g bases into %d windows",
                       sum(lengths(range)), width))
     ## Choose an initial batch size of most 100kb width windows and a small
     ## number of sequence rows and measure memory use for setting up this
