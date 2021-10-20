@@ -1,22 +1,18 @@
-PKG_CFLAGS = $(C_VISIBILITY) @CFLAGS@ @OPENMP_CFLAGS@
-PKG_CPPFLAGS = @CPPFLAGS@ @GHMM_CPPFLAGS@
-PKG_LIBS = @OPENMP_CFLAGS@ @LDFLAGS@ @GHMM_LDFLAGS@ @LIBS@ @GHMM_LIBS@
-
 if BUNDLED_GHMM
 SUBDIRS = ghmm-0.9-rc3 .
 endif
 
-lib_LTLIBRARIES    = tsshmm.la
-tsshmm_la_CFLAGS   = $(PKG_CFLAGS)
-tsshmm_la_CPPFLAGS = $(PKG_CPPFLAGS)
+lib_LTLIBRARIES = tsshmm.la
+tsshmm_la_CFLAGS = @CFLAGS@ @OPENMP_CFLAGS@ $(C_VISIBILITY)
+tsshmm_la_CPPFLAGS = @CPPFLAGS@ @GHMM_CPPFLAGS@
 if BUNDLED_GHMM
-tsshmm_la_LIBADD   = @GHMM_ROOT@/libghmm.la
-tsshmm_la_LDFLAGS  = -module $(PKG_LIBS) @LIBXML2_LIBS@
+tsshmm_la_LIBADD = @LIBS@ @GHMM_ROOT@/libghmm.la @LIBXML2_LIBS@
 else
-tsshmm_la_LDFLAGS  = -module $(PKG_LIBS)
+tsshmm_la_LIBADD = @LIBS@ @GHMM_LIBS@
 endif
-tsshmm_la_SOURCES  = R_init_tsshmm.c R_wrap_tsshmm.c models.c \
-simulate.c train.c tss.c viterbi.c
+tsshmm_la_LDFLAGS = @LDFLAGS@ @OPENMP_CFLAGS@ @GHMM_LDFLAGS@ -module
+tsshmm_la_SOURCES = R_init_tsshmm.c R_wrap_tsshmm.c models.c simulate.c	\
+train.c tss.c viterbi.c
 
 ACLOCAL_AMFLAGS = -I tools
 
