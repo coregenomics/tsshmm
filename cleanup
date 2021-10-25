@@ -10,11 +10,16 @@ aclocal.m4
 src/Makefile.am
 src/Makefile.in
 configure
+config.status
+src/Makefile
 "
 for file in $files_automake_refresh
 do
-    touch "$file"
-    sleep 0.01
+    if [ -e "$file" ]
+    then
+	touch "$file"
+	sleep 0.01
+    fi
 done
 
 # Remove generated files with make distclean
