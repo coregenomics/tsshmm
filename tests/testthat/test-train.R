@@ -27,6 +27,7 @@ test_that("train converges to true parameters", {
     list_from_matrix <- function(x) lapply(seq_len(ncol(x)), function(i) x[,i])
     obs <- as(list_from_matrix(t(obs)), "RleList")
     parameters(model) <- params_start
+    set.seed(456)
     model <- train(model, obs)
     diffs <-
         function(params) abs(params$trans["B", c("B", "N1", "P1")] -

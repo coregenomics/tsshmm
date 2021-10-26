@@ -466,7 +466,6 @@ df_updates <- function(model, n) {
 #' @section Model Training:
 #'
 #' obs <- encode_obs(signal, background)
-#' obs <- sample(obs) # shuffle
 #' model <- train(model, obs)
 #'
 #' `encode_obs(signal, background)` returns an `RleList` of encoded
@@ -482,8 +481,9 @@ df_updates <- function(model, n) {
 #'
 #' `train(model, obs)` returns the `model` with updated parameters of
 #' transition and emission probabilities.  The argument, `obs` produced by the
-#' `encode_obs()` function is an `RleList` of encoded observation states.
-#' One must shuffle the observations before running training.
+#' `encode_obs()` function is an `RleList` of encoded observation states.  One
+#' may set a seed value the observations before running `train()` to control
+#' the observation shuffling
 #'
 #' After training, you may wish to save the model parameters so that they can
 #' be reloaded in a later R session as explained in the examples.  Note that
@@ -621,6 +621,8 @@ setMethod(
         ## Begin measure time used for generating this batch of training
         ## data.
         t_start <- Sys.time()
+        flog.info("Shuffling observations")
+        obs <- sample(obs)
         flog.info("Exploding RleList into a long vector")
         obs <- as(obs, "IntegerList")
         flog.info("Running Baum-Welch")
