@@ -13,7 +13,7 @@ test_that("encode_obs allows empty input", {
     expect_equal(obs, RleList())
 })
 
-test_that("encode_obs ignores rows with only zeros", {
+test_that("encode_obs drops rows with only zeros", {
     obs <- IntegerList()
     n_cols <- 6
     n_rows <- 10
