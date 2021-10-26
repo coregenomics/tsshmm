@@ -20,11 +20,13 @@ test_that("encode_obs ignores rows with only zeros", {
     signal <- unlist(tile(
         GRanges(paste0("chr", 1:n_rows, ":100-1000:+")), n_cols))
     score(signal) <- seq_along(signal)
+    obs <- encode_obs(signal, GRanges(), nrow = n_cols)
+    expect_equal(length(obs), n_rows)
     n_rows_zeros <- 3
     only_zeros <- sample(n_rows, n_rows_zeros)
     mask <- rep(1:n_rows, each = n_cols) %in% only_zeros
     score(signal[mask]) <- 0
-    obs <- encode_obs(signal, GRanges(), nrow = 6)
+    obs <- encode_obs(signal, GRanges(), nrow = n_cols)
     expect_equal(length(obs), n_rows - n_rows_zeros)
 })
 
