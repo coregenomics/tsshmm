@@ -1,4 +1,4 @@
-#' @importFrom IRanges IntegerList
+#' @importFrom IRanges IntegerList RleList
 #' @importFrom S4Vectors DataFrame List
 #' @importFrom futile.logger flog.info
 #' @importFrom iterators nextElem idiv
@@ -469,7 +469,7 @@ df_updates <- function(model, n) {
 #' obs <- sample(obs) # shuffle
 #' model <- train(model, obs)
 #'
-#' `encode_obs(signal, background)` returns an `IntegerList` of encoded
+#' `encode_obs(signal, background)` returns an `RleList` of encoded
 #' observation states for training.  The arguments, `signal` and `bg`, are
 #' stranded, single base `GRanges` with integer scores.
 #'
@@ -482,7 +482,7 @@ df_updates <- function(model, n) {
 #'
 #' `train(model, obs)` returns the `model` with updated parameters of
 #' transition and emission probabilities.  The argument, `obs` produced by the
-#' `encode_obs()` function is an `IntegerList` of encoded observation states.
+#' `encode_obs()` function is an `RleList` of encoded observation states.
 #' One must shuffle the observations before running training.
 #'
 #' After training, you may wish to save the model parameters so that they can
@@ -528,7 +528,7 @@ encode_obs <- function(signal, bg, nrow = 1e3) {
     flog.info(sprintf(paste(
         "Creating %d obs with up to %d rows of windows each"),
         n_batches, nrow))
-    obs <- IntegerList()
+    obs <- RleList()
     completed <- 0
     elapsed_mins <- 0
     i <- 0
@@ -568,7 +568,7 @@ encode_obs <- function(signal, bg, nrow = 1e3) {
         ## tile_with_rev() to natively generate GRanges using vectorized
         ## rev input to eliminate wrapping the function with mapply() which
         ## produces the undesirable list output.
-        obs <- append(obs, encode(signal, bg, unlist(List(windows))))
+        obs <- append(obs, RleList(encode(signal, bg, unlist(List(windows)))))
         ## End measure time used for generating this batch of data.
         t_end <- Sys.time()
         t_diff <- difftime(t_end, t_start, units = "secs")
@@ -598,14 +598,14 @@ encode_obs <- function(signal, bg, nrow = 1e3) {
 
 #' @rdname TSSHMM-class
 #' @param model S4 object of a pre-designed hidden Markov model.
-#' @param obs IntegerList of encoded observation windows.
+#' @param obs RleList of encoded observation windows.
 setGeneric("train", function(model, obs) standardGeneric("train"))
 #' @rdname TSSHMM-class
 #'
 #' @exportMethod train
 setMethod(
     "train",
-    signature = c("TSSHMM", "IntegerList"),
+    signature = c("TSSHMM", "RleList"),
     definition = function(model, obs) {
         if (! length(obs)) {
             return(model)
@@ -618,6 +618,8 @@ setMethod(
         ## Begin measure time used for generating this batch of training
         ## data.
         t_start <- Sys.time()
+        flog.info("Exploding RleList into a long vector")
+        obs <- as(obs, "IntegerList")
         flog.info("Running Baum-Welch")
         ret <-
             .Call(C_train,

@@ -12,7 +12,7 @@
 \alias{show,TSSHMM-method}
 \alias{encode_obs}
 \alias{train}
-\alias{train,TSSHMM,IntegerList-method}
+\alias{train,TSSHMM,RleList-method}
 \alias{viterbi}
 \alias{viterbi,TSSHMM,GRanges,GRanges-method}
 \title{Transcription start site (TSS) hidden Markov model (HMM).}
@@ -33,7 +33,7 @@ encode_obs(signal, bg, nrow = 1000)
 
 train(model, obs)
 
-\S4method{train}{TSSHMM,IntegerList}(model, obs)
+\S4method{train}{TSSHMM,RleList}(model, obs)
 
 viterbi(model, signal, bg, ...)
 
@@ -59,7 +59,7 @@ more memory than the input data.}
 
 \item{model}{S4 object of a pre-designed hidden Markov model.}
 
-\item{obs}{IntegerList of encoded observation windows.}
+\item{obs}{RleList of encoded observation windows.}
 
 \item{...}{Optional arguments passed on from generics to methods.}
 
@@ -157,7 +157,7 @@ obs <- encode_obs(signal, background)
 obs <- sample(obs) # shuffle
 model <- train(model, obs)
 
-\code{encode_obs(signal, background)} returns an \code{IntegerList} of encoded
+\code{encode_obs(signal, background)} returns an \code{RleList} of encoded
 observation states for training.  The arguments, \code{signal} and \code{bg}, are
 stranded, single base \code{GRanges} with integer scores.
 
@@ -170,7 +170,7 @@ accurate training.
 
 \code{train(model, obs)} returns the \code{model} with updated parameters of
 transition and emission probabilities.  The argument, \code{obs} produced by the
-\code{encode_obs()} function is an \code{IntegerList} of encoded observation states.
+\code{encode_obs()} function is an \code{RleList} of encoded observation states.
 One must shuffle the observations before running training.
 
 After training, you may wish to save the model parameters so that they can

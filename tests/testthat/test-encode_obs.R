@@ -10,7 +10,7 @@ context("encode_obs")
 
 test_that("encode_obs allows empty input", {
     obs <- encode_obs(GRanges(), GRanges())
-    expect_equal(obs, IntegerList())
+    expect_equal(obs, RleList())
 })
 
 test_that("encode_obs segments up to 1e4 width 10 windows", {

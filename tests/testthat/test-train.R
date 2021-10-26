@@ -3,7 +3,7 @@ context("train")
 test_that("train does not change model for empty data", {
     model_orig <- TSSHMM()
     params <- parameters(model_orig)
-    obs <- IntegerList()
+    obs <- RleList()
     model <- train(model_orig, obs)
     expect_equal(parameters(model), params)
     expect_identical(model, model_orig)
@@ -25,7 +25,7 @@ test_that("train converges to true parameters", {
     expect_equal(digest::digest(obs), "f1681b80ab2b8ad0512a544cebfa4db0")
     ## https://stackoverflow.com/a/6821395
     list_from_matrix <- function(x) lapply(seq_len(ncol(x)), function(i) x[,i])
-    obs <- as(list_from_matrix(t(obs)), "IntegerList")
+    obs <- as(list_from_matrix(t(obs)), "RleList")
     parameters(model) <- params_start
     model <- train(model, obs)
     diffs <-
