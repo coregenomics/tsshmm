@@ -13,6 +13,21 @@ test_that("encode_obs allows empty input", {
     expect_equal(obs, RleList())
 })
 
+test_that("encode_obs ignores rows with only zeros", {
+    obs <- IntegerList()
+    n_cols <- 6
+    n_rows <- 10
+    signal <- unlist(tile(
+        GRanges(paste0("chr", 1:n_rows, ":100-1000:+")), n_cols))
+    score(signal) <- seq_along(signal)
+    n_rows_zeros <- 3
+    only_zeros <- sample(n_rows, n_rows_zeros)
+    mask <- rep(1:n_rows, each = n_cols) %in% only_zeros
+    score(signal[mask]) <- 0
+    obs <- encode_obs(signal, GRanges(), nrow = 6)
+    expect_equal(length(obs), n_rows - n_rows_zeros)
+})
+
 test_that("encode_obs segments up to 1e4 width 10 windows", {
     signal <- GRanges("chr:1-1e6:+", score = 2)
     obs <- encode_obs(signal, GRanges())
