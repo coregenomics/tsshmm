@@ -283,11 +283,11 @@ system.time(
 )
 
 ## Train the model.
-system.time(
+system.time({
     ## Seed for shuffling observations.
     set.seed(123)
     model_grocap <- train(model_grocap, obs_grocap)
-)
+})
 
 ## See the trained model parameters.
 model_grocap
@@ -312,10 +312,10 @@ system.time(
     obs_groseq <- encode_obs(signal, bg_groseq)
 )
 
-system.time(
+system.time({
     set.seed(456)
     model_groseq <- train(model_groseq, obs_groseq)
-)
+})
 
 model_groseq
 
