@@ -435,7 +435,8 @@ upset(
         c(grocap = length(tss_grocap_cmp) - length(ol),
           groseq  = length(tss_groseq_cmp) - length(ol),
           `grocap&groseq` = length(ol))),
-    order.by = "freq")
+    order.by = "freq",
+    text.scale = 1.8)
 ```
 
 Therefore, using the more plentiful and convenient GRO-seq background reference
