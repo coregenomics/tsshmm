@@ -3,8 +3,8 @@
     @brief Wrap C functions to accept R S-expression object arguments.
  */
 
-#ifndef R_WRAP_TSSHMM
-#define R_WRAP_TSSHMM
+#ifndef R_WRAP_TSSHMM_H
+#define R_WRAP_TSSHMM_H
 
 #include <Rdefines.h>
 
@@ -14,4 +14,4 @@ SEXP C_simulate(SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP C_viterbi(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP C_tss(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 
-#endif  /* R_WRAP_TSSHMM */
+#endif  /* R_WRAP_TSSHMM_H */
