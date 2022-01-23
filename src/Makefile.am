@@ -12,7 +12,7 @@ libtsshmm_la_LIBADD = @LIBS@ @GHMM_LIBS@
 endif
 libtsshmm_la_LDFLAGS = @LDFLAGS@ @OPENMP_CFLAGS@ @GHMM_LDFLAGS@
 libtsshmm_la_SOURCES = R_init_tsshmm.c R_wrap_tsshmm.c models.c simulate.c \
-train.c tss.c viterbi.c
+train.c train_ghmm_normalize_patch.c tss.c viterbi.c
 
 ACLOCAL_AMFLAGS = -I tools
 

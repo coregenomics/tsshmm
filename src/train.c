@@ -5,7 +5,7 @@
 
 #include <R_ext/RS.h>
 
-#include <ghmm/reestimate.h>
+#include "train_ghmm_normalize_patch.h"
 
 /** Allocate and point C GHMM discrete sequence type to R integer vectors.
 
@@ -75,7 +75,7 @@ train(int* converged, ghmm_dmodel* model, int* obs, int* lengths, int n)
 {
   ghmm_dseq *seq = NULL;
   sequence_alloc(&seq, obs, lengths, n);
-  *converged = ghmm_dmodel_baum_welch(model, seq) == 0;
+  *converged = ghmm_dmodel_baum_welch_normalize(model, seq) == 0;
   update_initial_states(model);
   sequence_free(&seq);
 }

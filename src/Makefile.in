@@ -136,7 +136,8 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 am_libtsshmm_la_OBJECTS = libtsshmm_la-R_init_tsshmm.lo \
 	libtsshmm_la-R_wrap_tsshmm.lo libtsshmm_la-models.lo \
 	libtsshmm_la-simulate.lo libtsshmm_la-train.lo \
-	libtsshmm_la-tss.lo libtsshmm_la-viterbi.lo
+	libtsshmm_la-train_ghmm_normalize_patch.lo libtsshmm_la-tss.lo \
+	libtsshmm_la-viterbi.lo
 libtsshmm_la_OBJECTS = $(am_libtsshmm_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -165,6 +166,7 @@ am__depfiles_remade = ./$(DEPDIR)/libtsshmm_la-R_init_tsshmm.Plo \
 	./$(DEPDIR)/libtsshmm_la-models.Plo \
 	./$(DEPDIR)/libtsshmm_la-simulate.Plo \
 	./$(DEPDIR)/libtsshmm_la-train.Plo \
+	./$(DEPDIR)/libtsshmm_la-train_ghmm_normalize_patch.Plo \
 	./$(DEPDIR)/libtsshmm_la-tss.Plo \
 	./$(DEPDIR)/libtsshmm_la-viterbi.Plo
 am__mv = mv -f
@@ -394,7 +396,7 @@ libtsshmm_la_CPPFLAGS = @CPPFLAGS@ @GHMM_CPPFLAGS@
 @BUNDLED_GHMM_TRUE@libtsshmm_la_LIBADD = @LIBS@ @GHMM_ROOT@/libghmm.la @LIBXML2_LIBS@
 libtsshmm_la_LDFLAGS = @LDFLAGS@ @OPENMP_CFLAGS@ @GHMM_LDFLAGS@
 libtsshmm_la_SOURCES = R_init_tsshmm.c R_wrap_tsshmm.c models.c simulate.c \
-train.c tss.c viterbi.c
+train.c train_ghmm_normalize_patch.c tss.c viterbi.c
 
 ACLOCAL_AMFLAGS = -I tools
 all: all-recursive
@@ -482,6 +484,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libtsshmm_la-models.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libtsshmm_la-simulate.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libtsshmm_la-train.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libtsshmm_la-train_ghmm_normalize_patch.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libtsshmm_la-tss.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libtsshmm_la-viterbi.Plo@am__quote@ # am--include-marker
 
@@ -546,6 +549,13 @@ libtsshmm_la-train.lo: train.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='train.c' object='libtsshmm_la-train.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libtsshmm_la_CPPFLAGS) $(CPPFLAGS) $(libtsshmm_la_CFLAGS) $(CFLAGS) -c -o libtsshmm_la-train.lo `test -f 'train.c' || echo '$(srcdir)/'`train.c
+
+libtsshmm_la-train_ghmm_normalize_patch.lo: train_ghmm_normalize_patch.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libtsshmm_la_CPPFLAGS) $(CPPFLAGS) $(libtsshmm_la_CFLAGS) $(CFLAGS) -MT libtsshmm_la-train_ghmm_normalize_patch.lo -MD -MP -MF $(DEPDIR)/libtsshmm_la-train_ghmm_normalize_patch.Tpo -c -o libtsshmm_la-train_ghmm_normalize_patch.lo `test -f 'train_ghmm_normalize_patch.c' || echo '$(srcdir)/'`train_ghmm_normalize_patch.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libtsshmm_la-train_ghmm_normalize_patch.Tpo $(DEPDIR)/libtsshmm_la-train_ghmm_normalize_patch.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='train_ghmm_normalize_patch.c' object='libtsshmm_la-train_ghmm_normalize_patch.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libtsshmm_la_CPPFLAGS) $(CPPFLAGS) $(libtsshmm_la_CFLAGS) $(CFLAGS) -c -o libtsshmm_la-train_ghmm_normalize_patch.lo `test -f 'train_ghmm_normalize_patch.c' || echo '$(srcdir)/'`train_ghmm_normalize_patch.c
 
 libtsshmm_la-tss.lo: tss.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libtsshmm_la_CPPFLAGS) $(CPPFLAGS) $(libtsshmm_la_CFLAGS) $(CFLAGS) -MT libtsshmm_la-tss.lo -MD -MP -MF $(DEPDIR)/libtsshmm_la-tss.Tpo -c -o libtsshmm_la-tss.lo `test -f 'tss.c' || echo '$(srcdir)/'`tss.c
@@ -773,6 +783,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/libtsshmm_la-models.Plo
 	-rm -f ./$(DEPDIR)/libtsshmm_la-simulate.Plo
 	-rm -f ./$(DEPDIR)/libtsshmm_la-train.Plo
+	-rm -f ./$(DEPDIR)/libtsshmm_la-train_ghmm_normalize_patch.Plo
 	-rm -f ./$(DEPDIR)/libtsshmm_la-tss.Plo
 	-rm -f ./$(DEPDIR)/libtsshmm_la-viterbi.Plo
 	-rm -f Makefile
@@ -825,6 +836,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/libtsshmm_la-models.Plo
 	-rm -f ./$(DEPDIR)/libtsshmm_la-simulate.Plo
 	-rm -f ./$(DEPDIR)/libtsshmm_la-train.Plo
+	-rm -f ./$(DEPDIR)/libtsshmm_la-train_ghmm_normalize_patch.Plo
 	-rm -f ./$(DEPDIR)/libtsshmm_la-tss.Plo
 	-rm -f ./$(DEPDIR)/libtsshmm_la-viterbi.Plo
 	-rm -f Makefile
