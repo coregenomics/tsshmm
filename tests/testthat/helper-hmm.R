@@ -15,3 +15,9 @@ signal <- setScore(bases, score_sig)
 score_bg <- rnbinom(n, 0.7, 0.5)
 bg <- setScore(bases, score_bg)
 empty <- GRanges("chr1:600-650")
+## Model trainined on full core2014 dataset with small B->P1 transition value
+## that created an error with tsshmm:::prom_dist().  These parameters were
+## generated from parameters(model_groseq) in 02-train.Rmd of:
+## https://gitlab.com/coregenomics/tsshmmpaper
+load(system.file("testdata", "parameters_model_groseq.rda",
+                 package = "tsshmm", mustWork = TRUE))

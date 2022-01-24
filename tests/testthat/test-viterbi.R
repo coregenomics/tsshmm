@@ -26,6 +26,16 @@ test_that("prom_dist detects tolerance too stringent", {
     }
 })
 
+test_that("prom_dist allows small transition probabilities", {
+    model <- TSSHMM(bg_genebody = TRUE)
+    parameters(model) <- parameters_model_groseq
+    ## For some reason the full genome trained trained GRO-seq model leads to
+    ## imprecisions with eigen decomposition that require an renormalization
+    ## step.  Without the renormalization, the "emission probabilities should
+    ## sum to 1" sanity test inside prom_dist() fails.
+    expect_true(prom_dist(model) > 0L)
+})
+
 test_that("stranded always splits into + and - levels", {
     expect_equal(lengths(stranded(GRanges("chr1:100:+"))), c("+" = 1, "-" = 0))
     expect_equal(lengths(stranded(GRanges("chr1:100:-"))), c("+" = 0, "-" = 1))

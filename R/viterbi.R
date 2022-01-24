@@ -46,6 +46,8 @@ prom_dist <- function(model, tol = 1e-3, n = 200) {
     pis <- unlist(apply(diag(length(l)), 1, list), recursive = FALSE)
     grid <- expand.grid(pi = pis, n = 1:n)
     dd <- mapply(psi, grid$pi, grid$n)
+    ## Renormalize due to minor imprecisions with eigen decomposition.
+    dd <- dd / rep(colSums(dd), each = 3)
     ## Set emission names.
     rownames(dd) <- c("bg", "enriched", "depleted")
     ## Create emission probability matrix.
