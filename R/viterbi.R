@@ -24,7 +24,7 @@ viterbi_low_level <- function(model, observations) {
 
 ## The theory and calculation of this minimum distance between promoters is
 ## explained in the vignette appendix.
-prom_dist <- function(model, tol = 1e-3, n = 200) {
+prom_dist <- function(model, tol = 1e-3, n = 1e3) {
     params <- parameters(model)
     ## Replace NA values with zeroes for the eigen() function.
     A <- params$trans

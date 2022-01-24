@@ -37,7 +37,7 @@ train(model, obs)
 
 viterbi(model, signal, bg, ...)
 
-\S4method{viterbi}{TSSHMM,GRanges,GRanges}(model, signal, bg, tol = 0.001, n = 200)
+\S4method{viterbi}{TSSHMM,GRanges,GRanges}(model, signal, bg, tol = 0.001, n = 1000)
 }
 \arguments{
 \item{x}{S4 object of a pre-designed hidden Markov model.}

@@ -714,7 +714,7 @@ setGeneric("viterbi",
 setMethod(
     "viterbi",
     signature = c("TSSHMM", "GRanges", "GRanges"),
-    definition = function(model, signal, bg, tol = 1e-3, n = 200) {
+    definition = function(model, signal, bg, tol = 1e-3, n = 1e3) {
         check_valid_hmm_reads(signal)
         check_valid_hmm_reads(bg)
         ranges <- reduce(
