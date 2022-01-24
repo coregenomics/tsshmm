@@ -1,3 +1,4 @@
+#' @importFrom BiocGenerics normalize
 #' @importFrom IRanges IntegerList RleList
 #' @importFrom S4Vectors DataFrame List
 #' @importFrom futile.logger flog.info
@@ -366,6 +367,19 @@ setMethod(
     }
 )
 
+## Internal method.
+setMethod(
+    "normalize",
+    signature = "TSSHMM",
+    definition = function(object) {
+        trans <- transitions(object)
+        transitions(object) <- trans / rowSums(trans, na.rm = TRUE)
+        emis <- emissions(object)
+        emissions(object) <- emis / rowSums(emis)
+        object
+    }
+)
+
 #' @rdname TSSHMM-class
 setGeneric("parameters", function(x) standardGeneric("parameters"))
 #' @rdname TSSHMM-class
@@ -659,7 +673,13 @@ setMethod(
                           length(obs),
                           rate_mins))
         flog.info("Finished training!")
-        model
+        ## Using the C function ghmm_dmodel_normalize() in Baum-Welch training
+        ## to correct for numerical precision with large training datasets with
+        ## 100s of millions of observations is necessary but not sufficient;
+        ## one final normalization at the R-layer is necessary to correct for
+        ## slight numerical imprecision that can otherwise lead to row-sum
+        ## sanity tests in ghmm_dmodel_check() failing.
+        normalize(model)
     }
 )
 

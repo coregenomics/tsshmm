@@ -154,7 +154,6 @@ emissions.
 
 
 obs <- encode_obs(signal, background)
-obs <- sample(obs) # shuffle
 model <- train(model, obs)
 
 \code{encode_obs(signal, background)} returns an \code{RleList} of encoded
@@ -170,8 +169,9 @@ accurate training.
 
 \code{train(model, obs)} returns the \code{model} with updated parameters of
 transition and emission probabilities.  The argument, \code{obs} produced by the
-\code{encode_obs()} function is an \code{RleList} of encoded observation states.
-One must shuffle the observations before running training.
+\code{encode_obs()} function is an \code{RleList} of encoded observation states.  One
+may set a seed value the observations before running \code{train()} to control
+the observation shuffling
 
 After training, you may wish to save the model parameters so that they can
 be reloaded in a later R session as explained in the examples.  Note that
