@@ -27,7 +27,7 @@ files_remote <- function(gse) {
 }
 files_remote <- unlist(map(c("GSE60453", "GSE60454"), files_remote))
 
-cached_files <- function(files_remote, cache = getBFCOption("CACHE")) {
+cached_files <- function(files_remote, cache = rappdirs::user_cache_dir()) {
     bfc <- BiocFileCache(ask = FALSE, cache = cache)
 
     ## Assume the remote files do not change.  Simply check if they are present
